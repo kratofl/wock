@@ -57,6 +57,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<WorkEntry>(entity =>
         {
+            entity.ToTable(table => table.HasCheckConstraint(
+                "CK_WorkEntries_TotalPausedSeconds_NonNegative",
+                $"{nameof(WorkEntry.TotalPausedSeconds)} >= 0"));
+
             entity.Property(entry => entry.ExternalTicketId)
                 .HasMaxLength(100);
 

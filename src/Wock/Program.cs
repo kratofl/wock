@@ -32,11 +32,17 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-using (var scope = app.Services.CreateScope())
+try
 {
+    using var scope = app.Services.CreateScope();
     var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
     await using var dbContext = await dbContextFactory.CreateDbContextAsync();
     await dbContext.Database.MigrateAsync();
+}
+catch (Exception exception)
+{
+    app.Logger.LogError(exception, "Failed to apply database migrations.");
+    throw;
 }
 
 app.Run();
