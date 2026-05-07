@@ -4,6 +4,7 @@ using Wock.Data;
 using Wock.Features.BookingTargets;
 using Wock.Features.Customers;
 using Wock.Features.Plugins;
+using Wock.Features.Reports;
 using Wock.Features.TimeTracking;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +24,7 @@ builder.Services.AddScoped<PluginRegistryService>();
 builder.Services.AddSingleton<PluginLoader>();
 builder.Services.AddSingleton<ISystemClock, SystemClock>();
 builder.Services.AddScoped<TimeTrackingService>();
+builder.Services.AddScoped<ReportService>();
 
 var app = builder.Build();
 

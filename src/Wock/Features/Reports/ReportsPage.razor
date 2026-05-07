@@ -1,0 +1,202 @@
+@page "/reports"
+@using Wock.Models
+@inject ReportService ReportService
+
+<h1>Reports</h1>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="alert alert-info">@_message</div>
+}
+
+<section class="card mb-4">
+    <div class="card-body">
+        <h2 class="h5 card-title">Filters</h2>
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label for="report-from" class="form-label">From</label>
+                <input id="report-from" type="date" class="form-control" value="@FormatDate(_fromDate)" @onchange="FromDateChanged" />
+            </div>
+            <div class="col-md-3">
+                <label for="report-to" class="form-label">To</label>
+                <input id="report-to" type="date" class="form-control" value="@FormatDate(_toDate)" @onchange="ToDateChanged" />
+            </div>
+            <div class="col-md-3">
+                <label for="report-customer" class="form-label">Customer</label>
+                <select id="report-customer" class="form-select" value="@_selectedCustomerId" @onchange="CustomerChanged">
+                    <option value="">All customers</option>
+                    @foreach (var customer in _customers)
+                    {
+                        <option value="@customer.Id">@customer.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="report-booking-target" class="form-label">Booking target</label>
+                <select id="report-booking-target" class="form-select" value="@_selectedBookingTargetId" @onchange="BookingTargetChanged">
+                    <option value="">All booking targets</option>
+                    @foreach (var target in _bookingTargets)
+                    {
+                        <option value="@target.Id">@target.Customer.Name - @target.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="report-external-ticket" class="form-label">External ticket</label>
+                <input id="report-external-ticket" class="form-control" value="@_externalTicketId" @oninput="ExternalTicketChanged" />
+            </div>
+            <div class="col-md-8 d-flex align-items-end gap-2">
+                <button type="button" class="btn btn-primary" @onclick="LoadReportAsync">Apply filters</button>
+                <button type="button" class="btn btn-secondary" @onclick="ExportCsvAsync">Export CSV</button>
+                @if (_csvDownloadUrl is not null)
+                {
+                    <a class="btn btn-outline-secondary" href="@_csvDownloadUrl" download="wock-report.csv">Download CSV</a>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Booking software</th>
+            <th>Booking ticket ID</th>
+            <th>External ticket ID</th>
+            <th>Description</th>
+            <th>Start</th>
+            <th>Stop</th>
+            <th>Pause duration</th>
+            <th>Net duration</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (_rows.Count == 0)
+        {
+            <tr>
+                <td colspan="10">No stopped work entries match the selected filters.</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var row in _rows)
+            {
+                <tr>
+                    <td>@row.Date.ToString("yyyy-MM-dd")</td>
+                    <td>@row.Customer</td>
+                    <td>@row.BookingSoftware</td>
+                    <td>@row.BookingTicketId</td>
+                    <td>@row.ExternalTicketId</td>
+                    <td>@row.Description</td>
+                    <td>@row.Start.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td>@row.Stop.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td>@row.PauseDuration</td>
+                    <td>@row.NetDuration</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    private IReadOnlyList<Customer> _customers = [];
+    private IReadOnlyList<BookingTarget> _bookingTargets = [];
+    private IReadOnlyList<ReportRow> _rows = [];
+    private DateOnly _fromDate = DateOnly.FromDateTime(DateTime.UtcNow.Date.AddDays(-30));
+    private DateOnly _toDate = DateOnly.FromDateTime(DateTime.UtcNow.Date);
+    private int? _selectedCustomerId = null;
+    private int? _selectedBookingTargetId = null;
+    private string? _externalTicketId = null;
+    private string? _message;
+    private string? _csvDownloadUrl;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var options = await ReportService.GetFilterOptionsAsync();
+        _customers = options.Customers;
+        _bookingTargets = options.BookingTargets;
+        await LoadReportAsync();
+    }
+
+    private async Task LoadReportAsync()
+    {
+        if (_fromDate > _toDate)
+        {
+            _message = "From date must be on or before To date.";
+            _rows = [];
+            _csvDownloadUrl = null;
+            return;
+        }
+
+        _rows = await ReportService.GetReportAsync(CurrentFilter());
+        _message = null;
+        _csvDownloadUrl = null;
+    }
+
+    private async Task ExportCsvAsync()
+    {
+        await LoadReportAsync();
+
+        if (!string.IsNullOrWhiteSpace(_message))
+        {
+            return;
+        }
+
+        var csv = ReportService.ExportCsv(_rows);
+        _csvDownloadUrl = $"data:text/csv;charset=utf-8,{Uri.EscapeDataString(csv)}";
+        _message = "CSV export is ready.";
+    }
+
+    private ReportFilter CurrentFilter()
+    {
+        return new ReportFilter(
+            _fromDate,
+            _toDate,
+            _selectedCustomerId,
+            _selectedBookingTargetId,
+            _externalTicketId);
+    }
+
+    private void FromDateChanged(ChangeEventArgs args)
+    {
+        if (DateOnly.TryParse(args.Value?.ToString(), out var date))
+        {
+            _fromDate = date;
+        }
+    }
+
+    private void ToDateChanged(ChangeEventArgs args)
+    {
+        if (DateOnly.TryParse(args.Value?.ToString(), out var date))
+        {
+            _toDate = date;
+        }
+    }
+
+    private void CustomerChanged(ChangeEventArgs args)
+    {
+        _selectedCustomerId = ParseNullableInt(args.Value?.ToString());
+    }
+
+    private void BookingTargetChanged(ChangeEventArgs args)
+    {
+        _selectedBookingTargetId = ParseNullableInt(args.Value?.ToString());
+    }
+
+    private void ExternalTicketChanged(ChangeEventArgs args)
+    {
+        _externalTicketId = args.Value?.ToString();
+    }
+
+    private static int? ParseNullableInt(string? value)
+    {
+        return int.TryParse(value, out var id) ? id : null;
+    }
+
+    private static string FormatDate(DateOnly date)
+    {
+        return date.ToString("yyyy-MM-dd");
+    }
+}
