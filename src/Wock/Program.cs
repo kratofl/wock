@@ -20,6 +20,12 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite(connectionString));
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<BookingTargetService>();
+builder.Services.Configure<PluginInstallOptions>(options =>
+{
+    options.StoragePath = builder.Configuration["Plugins:StoragePath"]
+        ?? Path.Combine(builder.Environment.ContentRootPath, "plugins");
+});
+builder.Services.AddScoped<PluginInstallService>();
 builder.Services.AddScoped<PluginRegistryService>();
 builder.Services.AddSingleton<PluginLoader>();
 builder.Services.AddSingleton<ISystemClock, SystemClock>();

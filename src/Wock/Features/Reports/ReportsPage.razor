@@ -53,6 +53,22 @@
                     <a class="btn btn-outline-secondary" href="@_csvDownloadUrl" download="wock-report.csv">Download CSV</a>
                 }
             </div>
+            <div class="col-12">
+                <span class="form-label d-block">Booking connectors</span>
+                @if (_bookingConnectors.Count == 0)
+                {
+                    <span class="text-muted">No enabled booking connectors.</span>
+                }
+                else
+                {
+                    <ul class="mb-0">
+                        @foreach (var connector in _bookingConnectors)
+                        {
+                            <li>@connector.Name (@connector.Version)</li>
+                        }
+                    </ul>
+                }
+            </div>
         </div>
     </div>
 </section>
@@ -103,6 +119,7 @@
 @code {
     private IReadOnlyList<Customer> _customers = [];
     private IReadOnlyList<BookingTarget> _bookingTargets = [];
+    private IReadOnlyList<Wock.Abstractions.WockPluginMetadata> _bookingConnectors = [];
     private IReadOnlyList<ReportRow> _rows = [];
     private DateOnly _fromDate = DateOnly.FromDateTime(DateTime.UtcNow.Date.AddDays(-30));
     private DateOnly _toDate = DateOnly.FromDateTime(DateTime.UtcNow.Date);
@@ -117,6 +134,7 @@
         var options = await ReportService.GetFilterOptionsAsync();
         _customers = options.Customers;
         _bookingTargets = options.BookingTargets;
+        _bookingConnectors = options.BookingConnectors;
         await LoadReportAsync();
     }
 

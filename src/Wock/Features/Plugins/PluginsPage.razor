@@ -20,7 +20,17 @@
         <div class="form-text">Folder must contain @PluginManifest.FileName.</div>
     </div>
 
-    <button type="submit" class="btn btn-primary">Install plugin</button>
+    <button type="submit" class="btn btn-primary">Install from folder</button>
+</EditForm>
+
+<EditForm Model="_installModel" OnValidSubmit="InstallZipAsync" class="mt-3">
+    <div class="mb-3">
+        <label for="plugin-zip" class="form-label">Plugin ZIP</label>
+        <InputText id="plugin-zip" class="form-control" @bind-Value="_installModel.PluginZipPath" />
+        <div class="form-text">ZIP archive must contain @PluginManifest.FileName and must not contain path traversal entries.</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Install from ZIP</button>
 </EditForm>
 
 <table class="table mt-4">
@@ -72,8 +82,24 @@
     {
         try
         {
-            await PluginRegistry.InstallAsync(_installModel.PluginFolderPath);
+            await PluginRegistry.InstallFromFolderAsync(_installModel.PluginFolderPath);
             _installModel.PluginFolderPath = string.Empty;
+            _message = "Plugin installed.";
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+        }
+
+        await RefreshAsync();
+    }
+
+    private async Task InstallZipAsync()
+    {
+        try
+        {
+            await PluginRegistry.InstallFromZipAsync(_installModel.PluginZipPath);
+            _installModel.PluginZipPath = string.Empty;
             _message = "Plugin installed.";
         }
         catch (Exception exception)
@@ -86,7 +112,20 @@
 
     private async Task SetEnabledAsync(int pluginId, bool isEnabled)
     {
-        await PluginRegistry.SetEnabledAsync(pluginId, isEnabled);
+        try
+        {
+            var plugin = await PluginRegistry.SetEnabledAsync(pluginId, isEnabled);
+            _message = isEnabled && plugin.IsEnabled
+                ? "Plugin enabled."
+                : isEnabled
+                    ? "Plugin could not be enabled."
+                    : "Plugin disabled.";
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+        }
+
         await RefreshAsync();
     }
 
@@ -98,5 +137,7 @@
     private sealed class InstallModel
     {
         public string PluginFolderPath { get; set; } = string.Empty;
+
+        public string PluginZipPath { get; set; } = string.Empty;
     }
 }

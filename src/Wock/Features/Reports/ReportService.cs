@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Wock.Abstractions;
 using Wock.Data;
+using Wock.Features.Plugins;
 using Wock.Models;
 
 namespace Wock.Features.Reports;
@@ -28,10 +30,25 @@ public sealed record ReportRow(
 
 public sealed record ReportFilterOptions(
     IReadOnlyList<Customer> Customers,
-    IReadOnlyList<BookingTarget> BookingTargets);
+    IReadOnlyList<BookingTarget> BookingTargets,
+    IReadOnlyList<WockPluginMetadata> BookingConnectors);
 
-public sealed class ReportService(IDbContextFactory<AppDbContext> dbContextFactory)
+public sealed class ReportService
 {
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly PluginRegistryService? _pluginRegistry;
+
+    public ReportService(IDbContextFactory<AppDbContext> dbContextFactory)
+        : this(dbContextFactory, null)
+    {
+    }
+
+    public ReportService(IDbContextFactory<AppDbContext> dbContextFactory, PluginRegistryService? pluginRegistry)
+    {
+        _dbContextFactory = dbContextFactory;
+        _pluginRegistry = pluginRegistry;
+    }
+
     private static readonly string[] CsvColumns =
     [
         "Date",
@@ -50,7 +67,7 @@ public sealed class ReportService(IDbContextFactory<AppDbContext> dbContextFacto
         ReportFilter filter,
         CancellationToken cancellationToken = default)
     {
-        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var from = ToStartOfDay(filter.FromDate);
         var toExclusive = ToStartOfDay(filter.ToDate.AddDays(1));
         var externalTicketId = Normalize(filter.ExternalTicketId);
@@ -120,7 +137,7 @@ public sealed class ReportService(IDbContextFactory<AppDbContext> dbContextFacto
 
     public async Task<ReportFilterOptions> GetFilterOptionsAsync(CancellationToken cancellationToken = default)
     {
-        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var customers = await context.Customers
             .AsNoTracking()
             .OrderBy(customer => customer.Name)
@@ -132,7 +149,13 @@ public sealed class ReportService(IDbContextFactory<AppDbContext> dbContextFacto
             .ThenBy(target => target.Name)
             .ToListAsync(cancellationToken);
 
-        return new ReportFilterOptions(customers, bookingTargets);
+        var bookingConnectors = _pluginRegistry is null
+            ? []
+            : (await _pluginRegistry.GetEnabledBookingConnectorsAsync(cancellationToken))
+                .Select(connector => connector.Metadata)
+                .ToList();
+
+        return new ReportFilterOptions(customers, bookingTargets, bookingConnectors);
     }
 
     private static ReportRow ToReportRow(WorkEntry entry)
