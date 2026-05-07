@@ -13,6 +13,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<WorkEntryPause> WorkEntryPauses => Set<WorkEntryPause>();
 
+    public DbSet<InstalledPlugin> InstalledPlugins => Set<InstalledPlugin>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -100,6 +102,49 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             entity.HasIndex(pause => pause.WorkEntryId);
             entity.HasIndex(pause => pause.PausedAt);
+        });
+
+        modelBuilder.Entity<InstalledPlugin>(entity =>
+        {
+            entity.Property(plugin => plugin.PluginId)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(plugin => plugin.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(plugin => plugin.Version)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(plugin => plugin.Description)
+                .HasMaxLength(2000);
+
+            entity.Property(plugin => plugin.AssemblyPath)
+                .IsRequired()
+                .HasMaxLength(1000);
+
+            entity.Property(plugin => plugin.TypeName)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(plugin => plugin.LastLoadStatus)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasDefaultValue(PluginLoadStatus.NotLoaded);
+
+            entity.Property(plugin => plugin.LastLoadError)
+                .HasMaxLength(4000);
+
+            entity.Property(plugin => plugin.IsEnabled)
+                .HasDefaultValue(false);
+
+            entity.HasIndex(plugin => plugin.PluginId)
+                .IsUnique();
+
+            entity.HasIndex(plugin => plugin.IsEnabled);
+            entity.HasIndex(plugin => plugin.LastLoadStatus);
         });
     }
 }

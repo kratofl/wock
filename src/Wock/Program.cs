@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Wock.Components;
 using Wock.Data;
+using Wock.Features.Plugins;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,8 @@ var connectionString = builder.Configuration.GetConnectionString("WockDb")
 
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite(connectionString));
+builder.Services.AddScoped<PluginRegistryService>();
+builder.Services.AddSingleton<PluginLoader>();
 
 var app = builder.Build();
 

@@ -1,0 +1,102 @@
+@page "/plugins"
+@using Microsoft.AspNetCore.Components.Forms
+@using Wock.Models
+@inject PluginRegistryService PluginRegistry
+
+<h1>Plugins</h1>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="alert alert-info">@_message</div>
+}
+
+<EditForm Model="_installModel" OnValidSubmit="InstallAsync">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="mb-3">
+        <label for="plugin-folder" class="form-label">Plugin folder</label>
+        <InputText id="plugin-folder" class="form-control" @bind-Value="_installModel.PluginFolderPath" />
+        <div class="form-text">Folder must contain @PluginManifest.FileName.</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Install plugin</button>
+</EditForm>
+
+<table class="table mt-4">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Version</th>
+            <th>Status</th>
+            <th>Enabled</th>
+            <th>Last error</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var plugin in _plugins)
+        {
+            <tr>
+                <td>@plugin.Name</td>
+                <td>@plugin.Version</td>
+                <td>@plugin.LastLoadStatus</td>
+                <td>@plugin.IsEnabled</td>
+                <td>@plugin.LastLoadError</td>
+                <td>
+                    @if (plugin.IsEnabled)
+                    {
+                        <button type="button" class="btn btn-sm btn-secondary" @onclick="() => SetEnabledAsync(plugin.Id, false)">Disable</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-sm btn-success" @onclick="() => SetEnabledAsync(plugin.Id, true)">Enable</button>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private readonly InstallModel _installModel = new();
+    private IReadOnlyList<InstalledPlugin> _plugins = [];
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task InstallAsync()
+    {
+        try
+        {
+            await PluginRegistry.InstallAsync(_installModel.PluginFolderPath);
+            _installModel.PluginFolderPath = string.Empty;
+            _message = "Plugin installed.";
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+        }
+
+        await RefreshAsync();
+    }
+
+    private async Task SetEnabledAsync(int pluginId, bool isEnabled)
+    {
+        await PluginRegistry.SetEnabledAsync(pluginId, isEnabled);
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _plugins = await PluginRegistry.ListAsync();
+    }
+
+    private sealed class InstallModel
+    {
+        public string PluginFolderPath { get; set; } = string.Empty;
+    }
+}
