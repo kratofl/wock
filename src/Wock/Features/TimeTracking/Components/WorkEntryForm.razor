@@ -1,0 +1,93 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using Wock.Models
+
+<EditForm Model="_model" OnValidSubmit="SubmitAsync">
+    <div class="mb-3">
+        <label for="time-tracking-customer" class="form-label">Customer</label>
+        <InputSelect id="time-tracking-customer" class="form-select" @bind-Value="_model.CustomerId" disabled="@Disabled">
+            <option value="0">Select a customer</option>
+            @foreach (var customer in Customers)
+            {
+                <option value="@customer.Id">@customer.Name</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="mb-3">
+        <label for="time-tracking-booking-target" class="form-label">Booking target</label>
+        <InputSelect id="time-tracking-booking-target" class="form-select" @bind-Value="_model.BookingTargetId" disabled="@Disabled">
+            <option value="">None</option>
+            @foreach (var target in AvailableBookingTargets)
+            {
+                <option value="@target.Id">@target.Name</option>
+            }
+        </InputSelect>
+    </div>
+
+    <div class="mb-3">
+        <label for="time-tracking-external-ticket" class="form-label">External ticket</label>
+        <InputText id="time-tracking-external-ticket" class="form-control" @bind-Value="_model.ExternalTicketId" disabled="@Disabled" />
+    </div>
+
+    <div class="mb-3">
+        <label for="time-tracking-description" class="form-label">Description</label>
+        <InputTextArea id="time-tracking-description" class="form-control" @bind-Value="_model.Description" disabled="@Disabled" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <div class="alert alert-warning">@_message</div>
+    }
+
+    <button type="submit" class="btn btn-primary" disabled="@(Disabled || !Customers.Any())">Start tracking</button>
+</EditForm>
+
+@code {
+    private readonly FormModel _model = new();
+    private string? _message;
+
+    [Parameter]
+    public IEnumerable<Customer> Customers { get; set; } = [];
+
+    [Parameter]
+    public IEnumerable<BookingTarget> BookingTargets { get; set; } = [];
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback<StartWorkEntryRequest> OnStart { get; set; }
+
+    private IEnumerable<BookingTarget> AvailableBookingTargets => BookingTargets
+        .Where(target => _model.CustomerId == 0 || target.CustomerId == _model.CustomerId);
+
+    private async Task SubmitAsync()
+    {
+        if (_model.CustomerId <= 0)
+        {
+            _message = "Choose an active customer before starting time tracking.";
+            return;
+        }
+
+        _message = null;
+        await OnStart.InvokeAsync(new StartWorkEntryRequest(
+            _model.CustomerId,
+            _model.BookingTargetId,
+            _model.ExternalTicketId,
+            _model.Description));
+        _model.BookingTargetId = null;
+        _model.ExternalTicketId = null;
+        _model.Description = null;
+    }
+
+    private sealed class FormModel
+    {
+        public int CustomerId { get; set; }
+
+        public int? BookingTargetId { get; set; }
+
+        public string? ExternalTicketId { get; set; }
+
+        public string? Description { get; set; }
+    }
+}
