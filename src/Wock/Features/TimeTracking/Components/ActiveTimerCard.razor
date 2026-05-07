@@ -1,0 +1,74 @@
+@using Wock.Models
+
+@if (Entry is null)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h2 class="h5 card-title">No active timer</h2>
+            <p class="card-text text-muted">Start tracking work to see the active timer here.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h2 class="h5 card-title">Active timer</h2>
+            <dl class="row mb-3">
+                <dt class="col-sm-3">Customer</dt>
+                <dd class="col-sm-9">@Entry.Customer?.Name</dd>
+
+                <dt class="col-sm-3">Status</dt>
+                <dd class="col-sm-9">@Entry.Status</dd>
+
+                @if (!string.IsNullOrWhiteSpace(Entry.ExternalTicketId))
+                {
+                    <dt class="col-sm-3">External ticket</dt>
+                    <dd class="col-sm-9">@Entry.ExternalTicketId</dd>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(Entry.Description))
+                {
+                    <dt class="col-sm-3">Description</dt>
+                    <dd class="col-sm-9">@Entry.Description</dd>
+                }
+
+                <dt class="col-sm-3">Net duration</dt>
+                <dd class="col-sm-9">@FormatDuration(NetDuration)</dd>
+            </dl>
+
+            @if (Entry.Status == WorkEntryStatus.Running)
+            {
+                <button type="button" class="btn btn-secondary me-2" @onclick="OnPause">Pause</button>
+            }
+            else if (Entry.Status == WorkEntryStatus.Paused)
+            {
+                <button type="button" class="btn btn-success me-2" @onclick="OnResume">Resume</button>
+            }
+
+            <button type="button" class="btn btn-danger" @onclick="OnStop">Stop</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public WorkEntry? Entry { get; set; }
+
+    [Parameter]
+    public TimeSpan NetDuration { get; set; }
+
+    [Parameter]
+    public EventCallback OnPause { get; set; }
+
+    [Parameter]
+    public EventCallback OnResume { get; set; }
+
+    [Parameter]
+    public EventCallback OnStop { get; set; }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        return $"{(int)duration.TotalHours:00}:{duration.Minutes:00}:{duration.Seconds:00}";
+    }
+}

@@ -74,6 +74,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .IsRequired()
                 .HasMaxLength(20);
 
+            entity.Property<int?>("ActiveSlot")
+                .HasComputedColumnSql(
+                    $"CASE WHEN {nameof(WorkEntry.Status)} IN ('{WorkEntryStatus.Running}', '{WorkEntryStatus.Paused}') THEN 1 ELSE NULL END");
+
             entity.HasOne(entry => entry.Customer)
                 .WithMany(customer => customer.WorkEntries)
                 .HasForeignKey(entry => entry.CustomerId)
@@ -90,6 +94,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(entry => entry.Status);
+            entity.HasIndex("ActiveSlot")
+                .HasDatabaseName("IX_WorkEntries_OneActiveEntry")
+                .HasFilter("ActiveSlot IS NOT NULL")
+                .IsUnique();
             entity.HasIndex(entry => entry.StartedAt);
             entity.HasIndex(entry => entry.CustomerId);
             entity.HasIndex(entry => entry.BookingTargetId);

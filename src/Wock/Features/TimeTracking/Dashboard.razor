@@ -1,0 +1,92 @@
+@page "/time-tracking"
+@using Microsoft.EntityFrameworkCore
+@using Wock.Data
+@using Wock.Features.TimeTracking.Components
+@using Wock.Models
+@inject TimeTrackingService TimeTracking
+@inject IDbContextFactory<AppDbContext> DbContextFactory
+
+<h1>Time Tracking</h1>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="alert alert-info">@_message</div>
+}
+
+<ActiveTimerCard Entry="_activeEntry" NetDuration="_netDuration" OnPause="PauseAsync" OnResume="ResumeAsync" OnStop="StopAsync" />
+
+<section class="card">
+    <div class="card-body">
+        <h2 class="h5 card-title">Start tracking</h2>
+        <WorkEntryForm Customers="_customers" BookingTargets="_bookingTargets" Disabled="@(_activeEntry is not null)" OnStart="StartAsync" />
+    </div>
+</section>
+
+@code {
+    private IReadOnlyList<Customer> _customers = [];
+    private IReadOnlyList<BookingTarget> _bookingTargets = [];
+    private WorkEntry? _activeEntry;
+    private TimeSpan _netDuration;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task StartAsync(StartWorkEntryRequest request)
+    {
+        await RunAndRefreshAsync(() => TimeTracking.StartAsync(
+            request.CustomerId,
+            request.BookingTargetId,
+            request.ExternalTicketId,
+            request.Description));
+    }
+
+    private async Task PauseAsync()
+    {
+        await RunAndRefreshAsync(() => TimeTracking.PauseAsync());
+    }
+
+    private async Task ResumeAsync()
+    {
+        await RunAndRefreshAsync(() => TimeTracking.ResumeAsync());
+    }
+
+    private async Task StopAsync()
+    {
+        await RunAndRefreshAsync(() => TimeTracking.StopAsync());
+    }
+
+    private async Task RunAndRefreshAsync(Func<Task<WorkEntry>> action)
+    {
+        try
+        {
+            await action();
+            _message = null;
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+        }
+
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        await using var context = await DbContextFactory.CreateDbContextAsync();
+        _customers = await context.Customers
+            .AsNoTracking()
+            .Where(customer => customer.IsActive)
+            .OrderBy(customer => customer.Name)
+            .ToListAsync();
+        _bookingTargets = await context.BookingTargets
+            .AsNoTracking()
+            .Where(target => target.IsActive)
+            .OrderBy(target => target.Name)
+            .ToListAsync();
+        _activeEntry = await TimeTracking.GetActiveEntryAsync();
+        _netDuration = _activeEntry is null ? TimeSpan.Zero : TimeTracking.GetNetDuration(_activeEntry);
+    }
+}

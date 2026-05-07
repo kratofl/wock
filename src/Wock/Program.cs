@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Wock.Components;
 using Wock.Data;
 using Wock.Features.Plugins;
+using Wock.Features.TimeTracking;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,8 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite(connectionString));
 builder.Services.AddScoped<PluginRegistryService>();
 builder.Services.AddSingleton<PluginLoader>();
+builder.Services.AddSingleton<ISystemClock, SystemClock>();
+builder.Services.AddScoped<TimeTrackingService>();
 
 var app = builder.Build();
 
