@@ -1,0 +1,215 @@
+@page "/booking-targets"
+@using Wock.Features.Customers
+@using Wock.Models
+@inject CustomerService CustomerService
+@inject BookingTargetService BookingTargetService
+
+<h1>Booking Targets</h1>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="alert alert-info">@_message</div>
+}
+
+<div class="mb-4">
+    <label for="booking-target-customer" class="form-label">Customer</label>
+    <select id="booking-target-customer" class="form-select" value="@_selectedCustomerId" @onchange="CustomerChangedAsync">
+        @foreach (var customer in _customers)
+        {
+            <option value="@customer.Id">@customer.Name</option>
+        }
+    </select>
+</div>
+
+@if (_selectedCustomerId is null)
+{
+    <p>Create an active customer before managing booking targets.</p>
+}
+else
+{
+    <section class="mb-4">
+        <h2 class="h4">Create booking target</h2>
+        <div class="mb-3">
+            <label for="booking-target-name" class="form-label">Name</label>
+            <input id="booking-target-name" class="form-control" @bind="_newTarget.Name" />
+        </div>
+        <div class="mb-3">
+            <label for="booking-software" class="form-label">Booking software</label>
+            <input id="booking-software" class="form-control" @bind="_newTarget.BookingSoftware" />
+        </div>
+        <div class="mb-3">
+            <label for="booking-ticket-id" class="form-label">Booking ticket ID</label>
+            <input id="booking-ticket-id" class="form-control" @bind="_newTarget.BookingTicketId" />
+        </div>
+        <div class="mb-3">
+            <label for="booking-target-notes" class="form-label">Notes</label>
+            <textarea id="booking-target-notes" class="form-control" @bind="_newTarget.Notes"></textarea>
+        </div>
+        <button type="button" class="btn btn-primary" @onclick="CreateAsync">Create booking target</button>
+    </section>
+
+    <h2 class="h4">Active booking targets</h2>
+
+    @if (_targets.Count == 0)
+    {
+        <p>No active booking targets for this customer.</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Booking software</th>
+                    <th>Booking ticket ID</th>
+                    <th>Notes</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var target in _targets)
+                {
+                    var model = _editModels[target.Id];
+                    <tr>
+                        <td>
+                            <input class="form-control" aria-label="Booking target name" @bind="model.Name" />
+                        </td>
+                        <td>
+                            <input class="form-control" aria-label="Booking software" @bind="model.BookingSoftware" />
+                        </td>
+                        <td>
+                            <input class="form-control" aria-label="Booking ticket ID" @bind="model.BookingTicketId" />
+                        </td>
+                        <td>
+                            <input class="form-control" aria-label="Booking target notes" @bind="model.Notes" />
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-secondary me-2" @onclick="() => UpdateAsync(target.Id)">Save</button>
+                            <button type="button" class="btn btn-sm btn-warning" @onclick="() => DeactivateAsync(target.Id)">Deactivate</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private readonly BookingTargetFormModel _newTarget = new();
+    private readonly Dictionary<int, BookingTargetFormModel> _editModels = [];
+    private IReadOnlyList<Customer> _customers = [];
+    private IReadOnlyList<BookingTarget> _targets = [];
+    private int? _selectedCustomerId;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _customers = await CustomerService.ListActiveAsync();
+        _selectedCustomerId = _customers.FirstOrDefault()?.Id;
+        await RefreshTargetsAsync();
+    }
+
+    private async Task CustomerChangedAsync(ChangeEventArgs args)
+    {
+        _selectedCustomerId = int.TryParse(args.Value?.ToString(), out var customerId)
+            ? customerId
+            : null;
+        await RefreshTargetsAsync();
+    }
+
+    private async Task CreateAsync()
+    {
+        if (_selectedCustomerId is null)
+        {
+            _message = "An active customer is required before creating a booking target.";
+            return;
+        }
+
+        try
+        {
+            await BookingTargetService.CreateAsync(
+                _selectedCustomerId.Value,
+                _newTarget.Name,
+                _newTarget.BookingSoftware,
+                _newTarget.BookingTicketId,
+                _newTarget.Notes);
+            _newTarget.Name = string.Empty;
+            _newTarget.BookingSoftware = string.Empty;
+            _newTarget.BookingTicketId = string.Empty;
+            _newTarget.Notes = string.Empty;
+            _message = "Booking target created.";
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+        }
+
+        await RefreshTargetsAsync();
+    }
+
+    private async Task UpdateAsync(int targetId)
+    {
+        try
+        {
+            var model = _editModels[targetId];
+            await BookingTargetService.UpdateAsync(
+                _selectedCustomerId!.Value,
+                targetId,
+                model.Name,
+                model.BookingSoftware,
+                model.BookingTicketId,
+                model.Notes);
+            _message = "Booking target updated.";
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+        }
+
+        await RefreshTargetsAsync();
+    }
+
+    private async Task DeactivateAsync(int targetId)
+    {
+        try
+        {
+            await BookingTargetService.DeactivateAsync(_selectedCustomerId!.Value, targetId);
+            _message = "Booking target deactivated.";
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+        }
+
+        await RefreshTargetsAsync();
+    }
+
+    private async Task RefreshTargetsAsync()
+    {
+        _targets = _selectedCustomerId is null
+            ? []
+            : await BookingTargetService.ListActiveForCustomerAsync(_selectedCustomerId.Value);
+        _editModels.Clear();
+        foreach (var target in _targets)
+        {
+            _editModels[target.Id] = new BookingTargetFormModel
+            {
+                Name = target.Name,
+                BookingSoftware = target.BookingSoftware,
+                BookingTicketId = target.BookingTicketId,
+                Notes = target.Notes ?? string.Empty
+            };
+        }
+    }
+
+    private sealed class BookingTargetFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string BookingSoftware { get; set; } = string.Empty;
+
+        public string BookingTicketId { get; set; } = string.Empty;
+
+        public string? Notes { get; set; }
+    }
+}

@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Wock.Components;
 using Wock.Data;
+using Wock.Features.BookingTargets;
+using Wock.Features.Customers;
 using Wock.Features.Plugins;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +16,8 @@ var connectionString = builder.Configuration.GetConnectionString("WockDb")
 
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite(connectionString));
+builder.Services.AddScoped<CustomerService>();
+builder.Services.AddScoped<BookingTargetService>();
 builder.Services.AddScoped<PluginRegistryService>();
 builder.Services.AddSingleton<PluginLoader>();
 

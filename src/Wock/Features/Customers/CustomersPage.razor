@@ -1,0 +1,141 @@
+@page "/customers"
+@using Wock.Models
+@inject CustomerService CustomerService
+
+<h1>Customers</h1>
+
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="alert alert-info">@_message</div>
+}
+
+<section class="mb-4">
+    <h2 class="h4">Create customer</h2>
+    <div class="mb-3">
+        <label for="customer-name" class="form-label">Name</label>
+        <input id="customer-name" class="form-control" @bind="_newCustomer.Name" />
+    </div>
+    <div class="mb-3">
+        <label for="customer-notes" class="form-label">Notes</label>
+        <textarea id="customer-notes" class="form-control" @bind="_newCustomer.Notes"></textarea>
+    </div>
+    <button type="button" class="btn btn-primary" @onclick="CreateAsync">Create customer</button>
+</section>
+
+<h2 class="h4">Active customers</h2>
+
+@if (_customers.Count == 0)
+{
+    <p>No active customers.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Notes</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var customer in _customers)
+            {
+                var model = _editModels[customer.Id];
+                <tr>
+                    <td>
+                        <input class="form-control" aria-label="Customer name" @bind="model.Name" />
+                    </td>
+                    <td>
+                        <input class="form-control" aria-label="Customer notes" @bind="model.Notes" />
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-secondary me-2" @onclick="() => UpdateAsync(customer.Id)">Save</button>
+                        <button type="button" class="btn btn-sm btn-warning" @onclick="() => DeactivateAsync(customer.Id)">Deactivate</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private readonly CustomerFormModel _newCustomer = new();
+    private readonly Dictionary<int, CustomerFormModel> _editModels = [];
+    private IReadOnlyList<Customer> _customers = [];
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+    }
+
+    private async Task CreateAsync()
+    {
+        try
+        {
+            await CustomerService.CreateAsync(_newCustomer.Name, _newCustomer.Notes);
+            _newCustomer.Name = string.Empty;
+            _newCustomer.Notes = string.Empty;
+            _message = "Customer created.";
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+        }
+
+        await RefreshAsync();
+    }
+
+    private async Task UpdateAsync(int customerId)
+    {
+        try
+        {
+            var model = _editModels[customerId];
+            await CustomerService.UpdateAsync(customerId, model.Name, model.Notes);
+            _message = "Customer updated.";
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+        }
+
+        await RefreshAsync();
+    }
+
+    private async Task DeactivateAsync(int customerId)
+    {
+        try
+        {
+            await CustomerService.DeactivateAsync(customerId);
+            _message = "Customer deactivated.";
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+        }
+
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _customers = await CustomerService.ListActiveAsync();
+        _editModels.Clear();
+        foreach (var customer in _customers)
+        {
+            _editModels[customer.Id] = new CustomerFormModel
+            {
+                Name = customer.Name,
+                Notes = customer.Notes ?? string.Empty
+            };
+        }
+    }
+
+    private sealed class CustomerFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string? Notes { get; set; }
+    }
+}
