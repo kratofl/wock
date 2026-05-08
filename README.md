@@ -84,15 +84,17 @@ docker compose down
 
 Only use `docker compose down --volumes` when you intentionally want to delete the database and plugin storage.
 
-## GitHub repository handoff
+## GitHub repository
 
-Repository creation/push is pending explicit visibility confirmation. To create the private GitHub repository and push this working tree after approval, run:
+The repository is hosted on GitHub:
 
-```powershell
-gh repo create kratofl/wock --private --source . --remote origin --push
-```
+- SSH: `git@github.com:kratofl/wock.git`
+- Web: <https://github.com/kratofl/wock>
+- Default branch: `main`
 
-Do not run the command until the repository visibility has been approved.
+## License
+
+Wock is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Start Wock when the PC starts
 
