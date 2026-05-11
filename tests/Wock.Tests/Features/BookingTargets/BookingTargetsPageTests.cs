@@ -2,6 +2,7 @@ using Bunit;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor.Services;
 using Wock.Data;
 using Wock.Features.BookingTargets;
 using Wock.Features.Customers;
@@ -19,7 +20,7 @@ public sealed class BookingTargetsPageTests
 
         page.WaitForAssertion(() =>
         {
-            Assert.Contains("Booking Targets", page.Markup);
+            Assert.Contains("Tasks", page.Markup);
             Assert.Contains("Customer", page.Markup);
             Assert.Contains("Create an active customer", page.Markup);
         });
@@ -60,6 +61,8 @@ public sealed class BookingTargetsPageTests
             var customerService = new CustomerService(factory);
             var bookingTargetService = new BookingTargetService(factory);
             var testContext = new BunitContext();
+            testContext.JSInterop.Mode = JSRuntimeMode.Loose;
+            testContext.Services.AddMudServices(config => config.PopoverOptions.CheckForPopoverProvider = false);
             testContext.Services.AddSingleton<IDbContextFactory<AppDbContext>>(factory);
             testContext.Services.AddSingleton(customerService);
             testContext.Services.AddSingleton(bookingTargetService);
@@ -69,7 +72,7 @@ public sealed class BookingTargetsPageTests
 
         public async ValueTask DisposeAsync()
         {
-            TestContext.Dispose();
+            await TestContext.DisposeAsync();
             await _connection.DisposeAsync();
         }
     }
@@ -82,7 +85,7 @@ public sealed class BookingTargetsPageTests
                 .UseSqlite(connection)
                 .Options;
 
-            return new AppDbContext(options);
+            return new AppDbContext(options, AnonymousCurrentUserContext.Instance, new SystemClock());
         }
 
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)

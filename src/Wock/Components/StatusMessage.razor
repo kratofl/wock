@@ -1,0 +1,15 @@
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <MudAlert Severity="@Kind" Variant="Variant.Outlined" Dense="true" Class="@Class">@Message</MudAlert>
+}
+
+@code {
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public Severity Kind { get; set; } = Severity.Info;
+
+    [Parameter]
+    public string? Class { get; set; } = "wock-status-message";
+}

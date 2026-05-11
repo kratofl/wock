@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using MudBlazor.Services;
 using Wock.Data;
 using Wock.Features.Plugins;
 using Wock.Models;
@@ -19,6 +20,8 @@ public sealed class PluginsPageTests : BunitContext, IDisposable
     {
         _connection.Open();
         _factory = new TestDbContextFactory(_connection);
+        JSInterop.Mode = JSRuntimeMode.Loose;
+        Services.AddMudServices(config => config.PopoverOptions.CheckForPopoverProvider = false);
         Services.AddSingleton<IDbContextFactory<AppDbContext>>(_factory);
         Services.AddSingleton(new PluginLoader());
         Services.AddSingleton(Options.Create(new PluginInstallOptions { StoragePath = _pluginStoragePath }));
@@ -77,7 +80,7 @@ public sealed class PluginsPageTests : BunitContext, IDisposable
 
     public new void Dispose()
     {
-        base.Dispose();
+        base.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _connection.Dispose();
         if (Directory.Exists(_pluginStoragePath))
         {
@@ -93,7 +96,7 @@ public sealed class PluginsPageTests : BunitContext, IDisposable
                 .UseSqlite(connection)
                 .Options;
 
-            return new AppDbContext(options);
+            return new AppDbContext(options, AnonymousCurrentUserContext.Instance, new SystemClock());
         }
 
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)

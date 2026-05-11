@@ -4,95 +4,78 @@
 @inject CustomerService CustomerService
 @inject BookingTargetService BookingTargetService
 
-<h1>Booking Targets</h1>
+<MudStack Spacing="3" Class="wock-page-stack">
+    <MudText Typo="Typo.h3">Tasks</MudText>
 
-@if (!string.IsNullOrWhiteSpace(_message))
-{
-    <div class="alert alert-info">@_message</div>
-}
+    <StatusMessage Message="@_message" Kind="@_messageSeverity" />
 
-<div class="mb-4">
-    <label for="booking-target-customer" class="form-label">Customer</label>
-    <select id="booking-target-customer" class="form-select" value="@_selectedCustomerId" @onchange="CustomerChangedAsync">
+    <MudSelect T="int?" Label="Customer" Value="@_selectedCustomerId" ValueChanged="CustomerChangedAsync" Variant="Variant.Outlined" Margin="Margin.Dense">
         @foreach (var customer in _customers)
         {
-            <option value="@customer.Id">@customer.Name</option>
+            <MudSelectItem T="int?" Value="@customer.Id">@customer.Name</MudSelectItem>
         }
-    </select>
-</div>
+    </MudSelect>
 
-@if (_selectedCustomerId is null)
-{
-    <p>Create an active customer before managing booking targets.</p>
-}
-else
-{
-    <section class="mb-4">
-        <h2 class="h4">Create booking target</h2>
-        <div class="mb-3">
-            <label for="booking-target-name" class="form-label">Name</label>
-            <input id="booking-target-name" class="form-control" @bind="_newTarget.Name" />
-        </div>
-        <div class="mb-3">
-            <label for="booking-software" class="form-label">Booking software</label>
-            <input id="booking-software" class="form-control" @bind="_newTarget.BookingSoftware" />
-        </div>
-        <div class="mb-3">
-            <label for="booking-ticket-id" class="form-label">Booking ticket ID</label>
-            <input id="booking-ticket-id" class="form-control" @bind="_newTarget.BookingTicketId" />
-        </div>
-        <div class="mb-3">
-            <label for="booking-target-notes" class="form-label">Notes</label>
-            <textarea id="booking-target-notes" class="form-control" @bind="_newTarget.Notes"></textarea>
-        </div>
-        <button type="button" class="btn btn-primary" @onclick="CreateAsync">Create booking target</button>
-    </section>
-
-    <h2 class="h4">Active booking targets</h2>
-
-    @if (_targets.Count == 0)
+    @if (_selectedCustomerId is null)
     {
-        <p>No active booking targets for this customer.</p>
+        <MudText>Create an active customer before managing tasks.</MudText>
     }
     else
     {
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Booking software</th>
-                    <th>Booking ticket ID</th>
-                    <th>Notes</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var target in _targets)
-                {
-                    var model = _editModels[target.Id];
-                    <tr>
-                        <td>
-                            <input class="form-control" aria-label="Booking target name" @bind="model.Name" />
-                        </td>
-                        <td>
-                            <input class="form-control" aria-label="Booking software" @bind="model.BookingSoftware" />
-                        </td>
-                        <td>
-                            <input class="form-control" aria-label="Booking ticket ID" @bind="model.BookingTicketId" />
-                        </td>
-                        <td>
-                            <input class="form-control" aria-label="Booking target notes" @bind="model.Notes" />
-                        </td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-secondary me-2" @onclick="() => UpdateAsync(target.Id)">Save</button>
-                            <button type="button" class="btn btn-sm btn-warning" @onclick="() => DeactivateAsync(target.Id)">Deactivate</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <MudPaper Elevation="0" Class="wock-section">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h5">Create task</MudText>
+                    <MudTextField T="string" Label="Name" @bind-Value="_newTarget.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField T="string" Label="Booking system" @bind-Value="_newTarget.BookingSoftware" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField T="string" Label="Booking reference" @bind-Value="_newTarget.BookingTicketId" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudTextField T="string" Label="Notes" Lines="3" @bind-Value="_newTarget.Notes" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateAsync">Create task</MudButton>
+            </MudStack>
+        </MudPaper>
+
+        <MudText Typo="Typo.h5">Active tasks</MudText>
+
+        @if (_targets.Count == 0)
+        {
+            <MudText>No active tasks for this customer.</MudText>
+        }
+        else
+        {
+            <MudTable Items="_targets" Hover="true" Dense="true">
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Booking system</MudTh>
+                    <MudTh>Booking reference</MudTh>
+                    <MudTh>Notes</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate Context="target">
+                    @{
+                        var model = _editModels[target.Id];
+                    }
+                    <MudTd DataLabel="Name">
+                        <MudTextField T="string" aria-label="Task name" @bind-Value="model.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudTd>
+                    <MudTd DataLabel="Booking system">
+                        <MudTextField T="string" aria-label="Booking system" @bind-Value="model.BookingSoftware" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudTd>
+                    <MudTd DataLabel="Booking reference">
+                        <MudTextField T="string" aria-label="Booking reference" @bind-Value="model.BookingTicketId" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudTd>
+                    <MudTd DataLabel="Notes">
+                        <MudTextField T="string" aria-label="Task notes" @bind-Value="model.Notes" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudTd>
+                    <MudTd>
+                        <div class="wock-button-row">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small" OnClick="() => UpdateAsync(target.Id)">Save</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small" OnClick="() => DeactivateAsync(target.Id)">Deactivate</MudButton>
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
     }
-}
+</MudStack>
 
 @code {
     private readonly BookingTargetFormModel _newTarget = new();
@@ -101,6 +84,7 @@ else
     private IReadOnlyList<BookingTarget> _targets = [];
     private int? _selectedCustomerId;
     private string? _message;
+    private Severity _messageSeverity = Severity.Info;
 
     protected override async Task OnInitializedAsync()
     {
@@ -109,11 +93,9 @@ else
         await RefreshTargetsAsync();
     }
 
-    private async Task CustomerChangedAsync(ChangeEventArgs args)
+    private async Task CustomerChangedAsync(int? customerId)
     {
-        _selectedCustomerId = int.TryParse(args.Value?.ToString(), out var customerId)
-            ? customerId
-            : null;
+        _selectedCustomerId = customerId;
         await RefreshTargetsAsync();
     }
 
@@ -121,7 +103,8 @@ else
     {
         if (_selectedCustomerId is null)
         {
-            _message = "An active customer is required before creating a booking target.";
+            _message = "An active customer is required before creating a task.";
+            _messageSeverity = Severity.Warning;
             return;
         }
 
@@ -137,11 +120,13 @@ else
             _newTarget.BookingSoftware = string.Empty;
             _newTarget.BookingTicketId = string.Empty;
             _newTarget.Notes = string.Empty;
-            _message = "Booking target created.";
+            _message = "Task created.";
+            _messageSeverity = Severity.Success;
         }
         catch (Exception exception)
         {
             _message = exception.Message;
+            _messageSeverity = Severity.Error;
         }
 
         await RefreshTargetsAsync();
@@ -159,11 +144,13 @@ else
                 model.BookingSoftware,
                 model.BookingTicketId,
                 model.Notes);
-            _message = "Booking target updated.";
+            _message = "Task updated.";
+            _messageSeverity = Severity.Success;
         }
         catch (Exception exception)
         {
             _message = exception.Message;
+            _messageSeverity = Severity.Error;
         }
 
         await RefreshTargetsAsync();
@@ -174,11 +161,13 @@ else
         try
         {
             await BookingTargetService.DeactivateAsync(_selectedCustomerId!.Value, targetId);
-            _message = "Booking target deactivated.";
+            _message = "Task deactivated.";
+            _messageSeverity = Severity.Success;
         }
         catch (Exception exception)
         {
             _message = exception.Message;
+            _messageSeverity = Severity.Error;
         }
 
         await RefreshTargetsAsync();
@@ -210,6 +199,6 @@ else
 
         public string BookingTicketId { get; set; } = string.Empty;
 
-        public string? Notes { get; set; }
+        public string Notes { get; set; } = string.Empty;
     }
 }

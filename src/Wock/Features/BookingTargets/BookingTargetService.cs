@@ -59,9 +59,9 @@ public sealed class BookingTargetService(IDbContextFactory<AppDbContext> dbConte
         var target = new BookingTarget
         {
             CustomerId = customerId,
-            Name = NormalizeRequired(name, "Booking target name is required."),
-            BookingSoftware = NormalizeRequired(bookingSoftware, "Booking software is required."),
-            BookingTicketId = NormalizeRequired(bookingTicketId, "Booking ticket ID is required."),
+            Name = NormalizeRequired(name, "Task name is required."),
+            BookingSoftware = NormalizeRequired(bookingSoftware, "Booking system is required."),
+            BookingTicketId = NormalizeRequired(bookingTicketId, "Booking reference is required."),
             Notes = NormalizeOptional(notes),
             IsActive = true
         };
@@ -82,7 +82,7 @@ public sealed class BookingTargetService(IDbContextFactory<AppDbContext> dbConte
     {
         if (bookingTargetId <= 0)
         {
-            throw new ArgumentException("Booking target ID must be greater than zero.", nameof(bookingTargetId));
+            throw new ArgumentException("Task ID must be greater than zero.", nameof(bookingTargetId));
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -92,11 +92,11 @@ public sealed class BookingTargetService(IDbContextFactory<AppDbContext> dbConte
             .SingleOrDefaultAsync(
                 target => target.Id == bookingTargetId && target.CustomerId == customerId,
                 cancellationToken)
-            ?? throw new InvalidOperationException($"Booking target {bookingTargetId} was not found for customer {customerId}.");
+            ?? throw new InvalidOperationException($"Task {bookingTargetId} was not found for customer {customerId}.");
 
-        target.Name = NormalizeRequired(name, "Booking target name is required.");
-        target.BookingSoftware = NormalizeRequired(bookingSoftware, "Booking software is required.");
-        target.BookingTicketId = NormalizeRequired(bookingTicketId, "Booking ticket ID is required.");
+        target.Name = NormalizeRequired(name, "Task name is required.");
+        target.BookingSoftware = NormalizeRequired(bookingSoftware, "Booking system is required.");
+        target.BookingTicketId = NormalizeRequired(bookingTicketId, "Booking reference is required.");
         target.Notes = NormalizeOptional(notes);
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -110,7 +110,7 @@ public sealed class BookingTargetService(IDbContextFactory<AppDbContext> dbConte
     {
         if (bookingTargetId <= 0)
         {
-            throw new ArgumentException("Booking target ID must be greater than zero.", nameof(bookingTargetId));
+            throw new ArgumentException("Task ID must be greater than zero.", nameof(bookingTargetId));
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -120,11 +120,11 @@ public sealed class BookingTargetService(IDbContextFactory<AppDbContext> dbConte
             .SingleOrDefaultAsync(
                 target => target.Id == bookingTargetId && target.CustomerId == customerId,
                 cancellationToken)
-            ?? throw new InvalidOperationException($"Booking target {bookingTargetId} was not found for customer {customerId}.");
+            ?? throw new InvalidOperationException($"Task {bookingTargetId} was not found for customer {customerId}.");
 
         if (!target.IsActive)
         {
-            throw new InvalidOperationException($"Booking target {bookingTargetId} is already inactive.");
+            throw new InvalidOperationException($"Task {bookingTargetId} is already inactive.");
         }
 
         target.IsActive = false;

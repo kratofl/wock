@@ -1,5 +1,7 @@
 .git
 .worktrees
+workspace
+.serena
 .vs
 .docker
 docker-data
@@ -15,6 +17,10 @@ TestResults
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+!src/Wock.Migrations.Sqlite/
+!src/Wock.Migrations.Sqlite/Wock.Migrations.Sqlite.csproj
+!src/Wock.Migrations.Sqlite/Migrations/
+!src/Wock.Migrations.Sqlite/Migrations/**
 *.sqlite3
 *.sqlite3-shm
 *.sqlite3-wal

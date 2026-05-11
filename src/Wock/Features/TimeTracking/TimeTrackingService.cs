@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Wock.Common.Time;
 using Wock.Data;
 using Wock.Models;
 
@@ -47,28 +48,16 @@ public sealed class TimeTrackingService(IDbContextFactory<AppDbContext> dbContex
                 .SingleOrDefaultAsync(target => target.Id == bookingTargetId.Value, cancellationToken);
             if (bookingTarget is null || !bookingTarget.IsActive)
             {
-                throw new ArgumentException("The booking target must exist and be active.", nameof(bookingTargetId));
+                throw new ArgumentException("The task must exist and be active.", nameof(bookingTargetId));
             }
 
             if (bookingTarget.CustomerId != customerId)
             {
-                throw new ArgumentException("The booking target must belong to the selected customer.", nameof(bookingTargetId));
+                throw new ArgumentException("The task must belong to the selected customer.", nameof(bookingTargetId));
             }
         }
 
-        var now = clock.UtcNow;
-        var entry = new WorkEntry
-        {
-            CustomerId = customerId,
-            BookingTargetId = bookingTargetId,
-            ExternalTicketId = Normalize(externalTicketId),
-            Description = Normalize(description),
-            StartedAt = now,
-            TotalPausedSeconds = 0,
-            Status = WorkEntryStatus.Running,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
+        var entry = CreateRunningEntry(customerId, bookingTargetId, externalTicketId, description, clock.UtcNow);
 
         context.WorkEntries.Add(entry);
         try
@@ -81,6 +70,75 @@ public sealed class TimeTrackingService(IDbContextFactory<AppDbContext> dbContex
         }
 
         return entry;
+    }
+
+    public async Task<WorkEntry> SwitchToBookingTargetAsync(
+        int bookingTargetId,
+        string? externalTicketId = null,
+        string? description = null,
+        CancellationToken cancellationToken = default)
+    {
+        await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var bookingTarget = await GetActiveBookingTargetAsync(context, bookingTargetId, cancellationToken);
+        var activeEntry = await ActiveEntries(context)
+            .Include(entry => entry.Pauses)
+            .SingleOrDefaultAsync(cancellationToken);
+        var now = clock.UtcNow;
+
+        if (activeEntry is null)
+        {
+            var entry = CreateRunningEntry(
+                bookingTarget.CustomerId,
+                bookingTarget.Id,
+                externalTicketId,
+                description,
+                now);
+            context.WorkEntries.Add(entry);
+            try
+            {
+                await context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException exception) when (IsSingleActiveEntryConstraintViolation(exception))
+            {
+                throw new InvalidOperationException("A work entry is already active.", exception);
+            }
+
+            return entry;
+        }
+
+        if (activeEntry.BookingTargetId == bookingTarget.Id)
+        {
+            if (activeEntry.Status == WorkEntryStatus.Paused)
+            {
+                ResumeEntry(activeEntry, now);
+                await context.SaveChangesAsync(cancellationToken);
+            }
+
+            return activeEntry;
+        }
+
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            StopEntry(activeEntry, now);
+            await context.SaveChangesAsync(cancellationToken);
+
+            var entry = CreateRunningEntry(
+                bookingTarget.CustomerId,
+                bookingTarget.Id,
+                externalTicketId,
+                description,
+                now);
+            context.WorkEntries.Add(entry);
+            await context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            return entry;
+        }
+        catch (DbUpdateException exception) when (IsSingleActiveEntryConstraintViolation(exception))
+        {
+            throw new InvalidOperationException("A work entry is already active.", exception);
+        }
     }
 
     public async Task<WorkEntry> PauseAsync(CancellationToken cancellationToken = default)
@@ -99,7 +157,6 @@ public sealed class TimeTrackingService(IDbContextFactory<AppDbContext> dbContex
 
         var now = clock.UtcNow;
         entry.Status = WorkEntryStatus.Paused;
-        entry.UpdatedAt = now;
         entry.Pauses.Add(new WorkEntryPause { PausedAt = now });
 
         await context.SaveChangesAsync(cancellationToken);
@@ -110,17 +167,8 @@ public sealed class TimeTrackingService(IDbContextFactory<AppDbContext> dbContex
     {
         await using var context = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var entry = await GetActiveEntryForUpdateAsync(context, cancellationToken);
-        if (entry.Status != WorkEntryStatus.Paused)
-        {
-            throw new InvalidOperationException("Only a paused work entry can be resumed.");
-        }
 
-        var pause = GetSingleOpenPause(entry);
-        var now = clock.UtcNow;
-        pause.ResumedAt = now;
-        entry.TotalPausedSeconds += ElapsedSeconds(pause.PausedAt, now);
-        entry.Status = WorkEntryStatus.Running;
-        entry.UpdatedAt = now;
+        ResumeEntry(entry, clock.UtcNow);
 
         await context.SaveChangesAsync(cancellationToken);
         return entry;
@@ -132,20 +180,7 @@ public sealed class TimeTrackingService(IDbContextFactory<AppDbContext> dbContex
         var entry = await GetActiveEntryForUpdateAsync(context, cancellationToken);
         var now = clock.UtcNow;
 
-        if (entry.Status == WorkEntryStatus.Paused)
-        {
-            var pause = GetSingleOpenPause(entry);
-            pause.ResumedAt = now;
-            entry.TotalPausedSeconds += ElapsedSeconds(pause.PausedAt, now);
-        }
-        else if (entry.Status != WorkEntryStatus.Running)
-        {
-            throw new InvalidOperationException("Only a running or paused work entry can be stopped.");
-        }
-
-        entry.Status = WorkEntryStatus.Stopped;
-        entry.StoppedAt = now;
-        entry.UpdatedAt = now;
+        StopEntry(entry, now);
 
         await context.SaveChangesAsync(cancellationToken);
         return entry;
@@ -163,9 +198,54 @@ public sealed class TimeTrackingService(IDbContextFactory<AppDbContext> dbContex
         return TimeSpan.FromSeconds(Math.Max(0, netSeconds));
     }
 
+    private static WorkEntry CreateRunningEntry(
+        int customerId,
+        int? bookingTargetId,
+        string? externalTicketId,
+        string? description,
+        DateTime startedAt)
+    {
+        return new WorkEntry
+        {
+            CustomerId = customerId,
+            BookingTargetId = bookingTargetId,
+            ExternalTicketId = Normalize(externalTicketId),
+            Description = Normalize(description),
+            StartedAt = startedAt,
+            TotalPausedSeconds = 0,
+            Status = WorkEntryStatus.Running
+        };
+    }
+
     private static IQueryable<WorkEntry> ActiveEntries(AppDbContext context)
     {
         return context.WorkEntries.Where(entry => entry.Status == WorkEntryStatus.Running || entry.Status == WorkEntryStatus.Paused);
+    }
+
+    private static async Task<BookingTarget> GetActiveBookingTargetAsync(
+        AppDbContext context,
+        int bookingTargetId,
+        CancellationToken cancellationToken)
+    {
+        if (bookingTargetId <= 0)
+        {
+            throw new ArgumentException("Task ID must be greater than zero.", nameof(bookingTargetId));
+        }
+
+        var bookingTarget = await context.BookingTargets
+            .Include(target => target.Customer)
+            .SingleOrDefaultAsync(target => target.Id == bookingTargetId, cancellationToken);
+        if (bookingTarget is null || !bookingTarget.IsActive)
+        {
+            throw new ArgumentException("The task must exist and be active.", nameof(bookingTargetId));
+        }
+
+        if (!bookingTarget.Customer.IsActive)
+        {
+            throw new ArgumentException("An active customer is required to start time tracking.", nameof(bookingTargetId));
+        }
+
+        return bookingTarget;
     }
 
     private static async Task EnsureNoActiveEntryAsync(AppDbContext context, CancellationToken cancellationToken)
@@ -194,6 +274,36 @@ public sealed class TimeTrackingService(IDbContextFactory<AppDbContext> dbContex
         }
 
         return openPauses[0];
+    }
+
+    private static void ResumeEntry(WorkEntry entry, DateTime now)
+    {
+        if (entry.Status != WorkEntryStatus.Paused)
+        {
+            throw new InvalidOperationException("Only a paused work entry can be resumed.");
+        }
+
+        var pause = GetSingleOpenPause(entry);
+        pause.ResumedAt = now;
+        entry.TotalPausedSeconds += ElapsedSeconds(pause.PausedAt, now);
+        entry.Status = WorkEntryStatus.Running;
+    }
+
+    private static void StopEntry(WorkEntry entry, DateTime now)
+    {
+        if (entry.Status == WorkEntryStatus.Paused)
+        {
+            var pause = GetSingleOpenPause(entry);
+            pause.ResumedAt = now;
+            entry.TotalPausedSeconds += ElapsedSeconds(pause.PausedAt, now);
+        }
+        else if (entry.Status != WorkEntryStatus.Running)
+        {
+            throw new InvalidOperationException("Only a running or paused work entry can be stopped.");
+        }
+
+        entry.Status = WorkEntryStatus.Stopped;
+        entry.StoppedAt = now;
     }
 
     private static int ElapsedSeconds(DateTime start, DateTime end)

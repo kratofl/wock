@@ -2,44 +2,40 @@
 @using Wock.Models
 
 <EditForm Model="_model" OnValidSubmit="SubmitAsync">
-    <div class="mb-3">
-        <label for="time-tracking-customer" class="form-label">Customer</label>
-        <InputSelect id="time-tracking-customer" class="form-select" @bind-Value="_model.CustomerId" disabled="@Disabled">
-            <option value="0">Select a customer</option>
-            @foreach (var customer in Customers)
-            {
-                <option value="@customer.Id">@customer.Name</option>
-            }
-        </InputSelect>
-    </div>
+    <MudStack Spacing="2">
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="6">
+                <MudSelect T="int" Label="Customer" @bind-Value="_model.CustomerId" Disabled="@Disabled" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem T="int" Value="0">Select a customer</MudSelectItem>
+                    @foreach (var customer in Customers)
+                    {
+                        <MudSelectItem T="int" Value="@customer.Id">@customer.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
 
-    <div class="mb-3">
-        <label for="time-tracking-booking-target" class="form-label">Booking target</label>
-        <InputSelect id="time-tracking-booking-target" class="form-select" @bind-Value="_model.BookingTargetId" disabled="@Disabled">
-            <option value="">None</option>
-            @foreach (var target in AvailableBookingTargets)
-            {
-                <option value="@target.Id">@target.Name</option>
-            }
-        </InputSelect>
-    </div>
+            <MudItem xs="12" md="6">
+                <MudSelect T="int?" Label="Task" @bind-Value="_model.BookingTargetId" Disabled="@Disabled" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var target in AvailableBookingTargets)
+                    {
+                        <MudSelectItem T="int?" Value="@target.Id">@target.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
 
-    <div class="mb-3">
-        <label for="time-tracking-external-ticket" class="form-label">External ticket</label>
-        <InputText id="time-tracking-external-ticket" class="form-control" @bind-Value="_model.ExternalTicketId" disabled="@Disabled" />
-    </div>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" Label="External ticket" @bind-Value="_model.ExternalTicketId" Disabled="@Disabled" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
 
-    <div class="mb-3">
-        <label for="time-tracking-description" class="form-label">Description</label>
-        <InputTextArea id="time-tracking-description" class="form-control" @bind-Value="_model.Description" disabled="@Disabled" />
-    </div>
+            <MudItem xs="12" md="6">
+                <MudTextField T="string" Label="Description" Lines="3" @bind-Value="_model.Description" Disabled="@Disabled" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            </MudItem>
+        </MudGrid>
 
-    @if (!string.IsNullOrWhiteSpace(_message))
-    {
-        <div class="alert alert-warning">@_message</div>
-    }
+        <StatusMessage Message="@_message" Kind="@Severity.Warning" />
 
-    <button type="submit" class="btn btn-primary" disabled="@(Disabled || !Customers.Any())">Start tracking</button>
+        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(Disabled || !Customers.Any())">Start custom tracking</MudButton>
+    </MudStack>
 </EditForm>
 
 @code {

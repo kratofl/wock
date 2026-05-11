@@ -53,10 +53,11 @@ public sealed class ReportServiceTests : IAsyncLifetime
 
         var row = Assert.Single(rows);
         Assert.Equal(expected.Id, row.WorkEntryId);
-        Assert.Equal("Acme", row.Customer);
-        Assert.Equal("Jira", row.BookingSoftware);
-        Assert.Equal("ACME-1", row.BookingTicketId);
-        Assert.Equal("EXT-123", row.ExternalTicketId);
+        Assert.Equal("Acme", row.CustomerName);
+        Assert.Equal("Acme Jira", row.TaskName);
+        Assert.Equal("Jira", row.BookingSystem);
+        Assert.Equal("ACME-1", row.BookingReference);
+        Assert.Equal("EXT-123", row.ExternalReference);
     }
 
     [Fact]
@@ -105,8 +106,9 @@ public sealed class ReportServiceTests : IAsyncLifetime
         var csv = await service.ExportCsvAsync(new ReportFilter(new DateOnly(2026, 5, 7), new DateOnly(2026, 5, 7)));
 
         var lines = csv.Split("\r\n");
-        Assert.Equal("Date,Customer,Booking software,Booking ticket ID,External ticket ID,Description,Start,Stop,Pause duration,Net duration", lines[0]);
+        Assert.Equal("Date,Customer,Task,Booking system,Booking reference,External reference,Description,Start,Stop,Pause duration,Net duration", lines[0]);
         Assert.Contains("\"Acme, Inc.\"", csv);
+        Assert.Contains("Target", csv);
         Assert.Contains("\"Jira \"\"Cloud\"\"\"", csv);
         Assert.Contains("\"Line one\r\nLine \"\"two\"\", with comma\"", csv);
         Assert.Contains("00:01:00,00:59:00", csv);
@@ -134,8 +136,7 @@ public sealed class ReportServiceTests : IAsyncLifetime
     {
         var customer = new Customer
         {
-            Name = name,
-            CreatedAt = DateTime.UtcNow
+            Name = name
         };
         context.Customers.Add(customer);
         await context.SaveChangesAsync();
@@ -224,7 +225,7 @@ public sealed class ReportServiceTests : IAsyncLifetime
             TotalPausedSeconds = totalPausedSeconds,
             Status = status,
             CreatedAt = startedAt,
-            UpdatedAt = stoppedAt ?? startedAt
+            ModifiedAt = stoppedAt
         };
         context.WorkEntries.Add(entry);
         await context.SaveChangesAsync();
@@ -239,7 +240,7 @@ public sealed class ReportServiceTests : IAsyncLifetime
                 .UseSqlite(connection)
                 .Options;
 
-            return new AppDbContext(options);
+            return new AppDbContext(options, AnonymousCurrentUserContext.Instance, new SystemClock());
         }
 
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)

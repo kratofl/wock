@@ -1,5 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Wock.Common.Security;
+using Wock.Common.Time;
 using Wock.Data;
 using Wock.Features.TimeTracking;
 using Wock.Models;
@@ -29,7 +31,7 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
         Assert.Equal(WorkEntryStatus.Running, entry.Status);
         Assert.Equal(_clock.UtcNow, entry.StartedAt);
         Assert.Equal(_clock.UtcNow, entry.CreatedAt);
-        Assert.Equal(_clock.UtcNow, entry.UpdatedAt);
+        Assert.Null(entry.ModifiedAt);
         Assert.Equal(0, entry.TotalPausedSeconds);
         Assert.Null(entry.StoppedAt);
 
@@ -90,8 +92,112 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
         var inactiveException = await Assert.ThrowsAsync<ArgumentException>(() => service.StartAsync(customer.Id, inactiveTarget.Id));
         var ownershipException = await Assert.ThrowsAsync<ArgumentException>(() => service.StartAsync(customer.Id, otherCustomerTarget.Id));
 
-        Assert.Contains("booking target", inactiveException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("task", inactiveException.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("customer", ownershipException.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SwitchToBookingTargetAsync_starts_target_and_derives_customer()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        var customer = await AddCustomerAsync(context, "Acme");
+        var target = await AddBookingTargetAsync(context, customer.Id, "Feature work");
+        var service = CreateService();
+
+        var entry = await service.SwitchToBookingTargetAsync(target.Id, "ABC-123", "Build quick switch");
+
+        Assert.Equal(customer.Id, entry.CustomerId);
+        Assert.Equal(target.Id, entry.BookingTargetId);
+        Assert.Equal("ABC-123", entry.ExternalTicketId);
+        Assert.Equal("Build quick switch", entry.Description);
+        Assert.Equal(WorkEntryStatus.Running, entry.Status);
+        Assert.Equal(_clock.UtcNow, entry.StartedAt);
+    }
+
+    [Fact]
+    public async Task SwitchToBookingTargetAsync_stops_current_entry_and_starts_selected_target()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        var customer = await AddCustomerAsync(context, "Acme");
+        var firstTarget = await AddBookingTargetAsync(context, customer.Id, "First task");
+        var nextTarget = await AddBookingTargetAsync(context, customer.Id, "Next task");
+        var service = CreateService();
+        var firstEntry = await service.SwitchToBookingTargetAsync(firstTarget.Id);
+        _clock.UtcNow = _clock.UtcNow.AddMinutes(25);
+
+        var nextEntry = await service.SwitchToBookingTargetAsync(nextTarget.Id);
+
+        Assert.Equal(nextTarget.Id, nextEntry.BookingTargetId);
+        Assert.Equal(WorkEntryStatus.Running, nextEntry.Status);
+        await using var verificationContext = await _factory.CreateDbContextAsync();
+        var savedFirstEntry = await verificationContext.WorkEntries.SingleAsync(entry => entry.Id == firstEntry.Id);
+        Assert.Equal(WorkEntryStatus.Stopped, savedFirstEntry.Status);
+        Assert.Equal(_clock.UtcNow, savedFirstEntry.StoppedAt);
+        Assert.Equal(2, await verificationContext.WorkEntries.CountAsync());
+    }
+
+    [Fact]
+    public async Task SwitchToBookingTargetAsync_resumes_paused_active_target()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        var customer = await AddCustomerAsync(context, "Acme");
+        var target = await AddBookingTargetAsync(context, customer.Id, "Paused task");
+        var service = CreateService();
+        var entry = await service.SwitchToBookingTargetAsync(target.Id);
+        _clock.UtcNow = _clock.UtcNow.AddMinutes(5);
+        await service.PauseAsync();
+        _clock.UtcNow = _clock.UtcNow.AddSeconds(75);
+
+        var resumed = await service.SwitchToBookingTargetAsync(target.Id);
+
+        Assert.Equal(entry.Id, resumed.Id);
+        Assert.Equal(WorkEntryStatus.Running, resumed.Status);
+        Assert.Equal(75, resumed.TotalPausedSeconds);
+        Assert.All(resumed.Pauses, pause => Assert.NotNull(pause.ResumedAt));
+        await using var verificationContext = await _factory.CreateDbContextAsync();
+        Assert.Equal(1, await verificationContext.WorkEntries.CountAsync());
+    }
+
+    [Fact]
+    public async Task SwitchToBookingTargetAsync_keeps_running_active_target_unchanged()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        var customer = await AddCustomerAsync(context, "Acme");
+        var target = await AddBookingTargetAsync(context, customer.Id, "Running task");
+        var service = CreateService();
+        var entry = await service.SwitchToBookingTargetAsync(target.Id);
+        _clock.UtcNow = _clock.UtcNow.AddMinutes(5);
+
+        var sameEntry = await service.SwitchToBookingTargetAsync(target.Id);
+
+        Assert.Equal(entry.Id, sameEntry.Id);
+        Assert.Equal(WorkEntryStatus.Running, sameEntry.Status);
+        Assert.Null(sameEntry.StoppedAt);
+        await using var verificationContext = await _factory.CreateDbContextAsync();
+        Assert.Equal(1, await verificationContext.WorkEntries.CountAsync());
+    }
+
+    [Fact]
+    public async Task SwitchToBookingTargetAsync_rolls_back_current_timer_when_new_start_fails()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        var customer = await AddCustomerAsync(context, "Acme");
+        var currentTarget = await AddBookingTargetAsync(context, customer.Id, "Current task");
+        var nextTarget = await AddBookingTargetAsync(context, customer.Id, "Next task");
+        var service = CreateService();
+        var currentEntry = await service.SwitchToBookingTargetAsync(currentTarget.Id);
+        _clock.UtcNow = _clock.UtcNow.AddMinutes(10);
+        var failingService = new TimeTrackingService(new FailingSwitchDbContextFactory(_connection, _clock), _clock);
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => failingService.SwitchToBookingTargetAsync(nextTarget.Id));
+
+        await using var verificationContext = await _factory.CreateDbContextAsync();
+        var activeEntry = await verificationContext.WorkEntries.SingleAsync(
+            entry => entry.Status == WorkEntryStatus.Running || entry.Status == WorkEntryStatus.Paused);
+        Assert.Equal(currentEntry.Id, activeEntry.Id);
+        Assert.Equal(currentTarget.Id, activeEntry.BookingTargetId);
+        Assert.Null(activeEntry.StoppedAt);
+        Assert.Equal(1, await verificationContext.WorkEntries.CountAsync());
     }
 
     [Fact]
@@ -175,9 +281,7 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
             StartedAt = new DateTime(2026, 5, 7, 10, 0, 0, DateTimeKind.Utc),
             StoppedAt = new DateTime(2026, 5, 7, 11, 0, 0, DateTimeKind.Utc),
             TotalPausedSeconds = 900,
-            Status = WorkEntryStatus.Stopped,
-            CreatedAt = new DateTime(2026, 5, 7, 10, 0, 0, DateTimeKind.Utc),
-            UpdatedAt = new DateTime(2026, 5, 7, 11, 0, 0, DateTimeKind.Utc)
+            Status = WorkEntryStatus.Stopped
         };
         Assert.Equal(TimeSpan.FromMinutes(45), service.GetNetDuration(entry));
 
@@ -219,17 +323,13 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
             {
                 CustomerId = customer.Id,
                 StartedAt = now,
-                Status = WorkEntryStatus.Running,
-                CreatedAt = now,
-                UpdatedAt = now
+                Status = WorkEntryStatus.Running
             },
             new WorkEntry
             {
                 CustomerId = customer.Id,
                 StartedAt = now.AddMinutes(1),
-                Status = WorkEntryStatus.Paused,
-                CreatedAt = now.AddMinutes(1),
-                UpdatedAt = now.AddMinutes(1)
+                Status = WorkEntryStatus.Paused
             });
 
         await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
@@ -251,8 +351,8 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await _connection.OpenAsync();
-        _factory = new TestDbContextFactory(_connection);
         _clock = new FakeClock { UtcNow = new DateTime(2026, 5, 7, 8, 0, 0, DateTimeKind.Utc) };
+        _factory = new TestDbContextFactory(_connection, _clock);
         await using var context = await _factory.CreateDbContextAsync();
         await context.Database.EnsureCreatedAsync();
     }
@@ -284,8 +384,7 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
         var customer = new Customer
         {
             Name = name,
-            IsActive = isActive,
-            CreatedAt = DateTime.UtcNow
+            IsActive = isActive
         };
         context.Customers.Add(customer);
         await context.SaveChangesAsync();
@@ -312,7 +411,7 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
         public DateTime UtcNow { get; set; }
     }
 
-    private sealed class TestDbContextFactory(SqliteConnection connection) : IDbContextFactory<AppDbContext>
+    private sealed class TestDbContextFactory(SqliteConnection connection, ISystemClock clock) : IDbContextFactory<AppDbContext>
     {
         public AppDbContext CreateDbContext()
         {
@@ -320,7 +419,7 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
                 .UseSqlite(connection)
                 .Options;
 
-            return new AppDbContext(options);
+            return new AppDbContext(options, AnonymousCurrentUserContext.Instance, clock);
         }
 
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
@@ -346,12 +445,61 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
         }
     }
 
-    private sealed class ConflictingAppDbContext(
-        DbContextOptions<AppDbContext> options,
-        SqliteConnection connection,
-        ISystemClock clock) : AppDbContext(options)
+    private sealed class FailingSwitchDbContextFactory(SqliteConnection connection, ISystemClock clock) : IDbContextFactory<AppDbContext>
     {
+        public AppDbContext CreateDbContext()
+        {
+            var options = new DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlite(connection)
+                .Options;
+
+            return new FailingSwitchAppDbContext(options, clock);
+        }
+
+        public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(CreateDbContext());
+        }
+    }
+
+    private sealed class FailingSwitchAppDbContext(DbContextOptions<AppDbContext> options, ISystemClock clock)
+        : AppDbContext(options, AnonymousCurrentUserContext.Instance, clock)
+    {
+        private int _saveCount;
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            _saveCount++;
+            if (_saveCount == 2 && ChangeTracker.Entries<WorkEntry>().Any(IsAddedActiveEntry))
+            {
+                throw new DbUpdateException("Simulated switch start failure.");
+            }
+
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
+        private static bool IsAddedActiveEntry(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<WorkEntry> entry)
+        {
+            return entry.State == EntityState.Added
+                && (entry.Entity.Status == WorkEntryStatus.Running || entry.Entity.Status == WorkEntryStatus.Paused);
+        }
+    }
+
+    private sealed class ConflictingAppDbContext : AppDbContext
+    {
+        private readonly SqliteConnection _connection;
+        private readonly ISystemClock _clock;
         private bool _conflictInserted;
+
+        public ConflictingAppDbContext(
+            DbContextOptions<AppDbContext> options,
+            SqliteConnection connection,
+            ISystemClock clock)
+            : base(options, AnonymousCurrentUserContext.Instance, clock)
+        {
+            _connection = connection;
+            _clock = clock;
+        }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -364,17 +512,15 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
             {
                 _conflictInserted = true;
                 var conflictOptions = new DbContextOptionsBuilder<AppDbContext>()
-                    .UseSqlite(connection)
+                    .UseSqlite(_connection)
                     .Options;
-                await using var conflictContext = new AppDbContext(conflictOptions);
-                var now = clock.UtcNow.AddSeconds(1);
+                await using var conflictContext = new AppDbContext(conflictOptions, AnonymousCurrentUserContext.Instance, _clock);
+                var now = _clock.UtcNow.AddSeconds(1);
                 conflictContext.WorkEntries.Add(new WorkEntry
                 {
                     CustomerId = pendingActiveEntry.CustomerId,
                     StartedAt = now,
-                    Status = WorkEntryStatus.Running,
-                    CreatedAt = now,
-                    UpdatedAt = now
+                    Status = WorkEntryStatus.Running
                 });
                 await conflictContext.SaveChangesAsync(cancellationToken);
             }

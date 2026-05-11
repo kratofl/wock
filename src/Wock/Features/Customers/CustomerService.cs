@@ -34,8 +34,7 @@ public sealed class CustomerService(IDbContextFactory<AppDbContext> dbContextFac
         {
             Name = NormalizeRequired(name, "Customer name is required."),
             Notes = NormalizeOptional(notes),
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            IsActive = true
         };
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);

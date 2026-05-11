@@ -34,9 +34,9 @@ public sealed class BookingTargetServiceTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData("", "Jira", "ALPHA-123", "Booking target name is required")]
-    [InlineData("Project Alpha", "", "ALPHA-123", "Booking software is required")]
-    [InlineData("Project Alpha", "Jira", "", "Booking ticket ID is required")]
+    [InlineData("", "Jira", "ALPHA-123", "Task name is required")]
+    [InlineData("Project Alpha", "", "ALPHA-123", "Booking system is required")]
+    [InlineData("Project Alpha", "Jira", "", "Booking reference is required")]
     public async Task CreateAsync_rejects_required_booking_fields(
         string name,
         string bookingSoftware,
@@ -65,9 +65,9 @@ public sealed class BookingTargetServiceTests : IAsyncLifetime
         var missingTicket = await Assert.ThrowsAsync<ArgumentException>(
             () => service.CreateAsync(customer.Id, "Project Alpha", "Jira", null!, null));
 
-        Assert.Contains("Booking target name is required", missingName.Message);
-        Assert.Contains("Booking software is required", missingSoftware.Message);
-        Assert.Contains("Booking ticket ID is required", missingTicket.Message);
+        Assert.Contains("Task name is required", missingName.Message);
+        Assert.Contains("Booking system is required", missingSoftware.Message);
+        Assert.Contains("Booking reference is required", missingTicket.Message);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public sealed class BookingTargetServiceTests : IAsyncLifetime
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.UpdateAsync(customer.Id, 999, "Missing", "Jira", "MISS-1", null));
-        Assert.Contains("Booking target 999 was not found", exception.Message);
+        Assert.Contains("Task 999 was not found", exception.Message);
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public sealed class BookingTargetServiceTests : IAsyncLifetime
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.UpdateAsync(selectedCustomer.Id, otherTarget.Id, "Changed", "Jira", "OTHER-2", null));
 
-        Assert.Contains($"Booking target {otherTarget.Id} was not found for customer {selectedCustomer.Id}", exception.Message);
+        Assert.Contains($"Task {otherTarget.Id} was not found for customer {selectedCustomer.Id}", exception.Message);
     }
 
     [Fact]
@@ -144,7 +144,7 @@ public sealed class BookingTargetServiceTests : IAsyncLifetime
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.DeactivateAsync(selectedCustomer.Id, otherTarget.Id));
 
-        Assert.Contains($"Booking target {otherTarget.Id} was not found for customer {selectedCustomer.Id}", exception.Message);
+        Assert.Contains($"Task {otherTarget.Id} was not found for customer {selectedCustomer.Id}", exception.Message);
     }
 
     [Fact]
@@ -202,8 +202,7 @@ public sealed class BookingTargetServiceTests : IAsyncLifetime
         var customer = new Customer
         {
             Name = name,
-            IsActive = isActive,
-            CreatedAt = DateTime.UtcNow
+            IsActive = isActive
         };
         context.Customers.Add(customer);
         await context.SaveChangesAsync();
@@ -241,7 +240,7 @@ public sealed class BookingTargetServiceTests : IAsyncLifetime
                 .UseSqlite(connection)
                 .Options;
 
-            return new AppDbContext(options);
+            return new AppDbContext(options, AnonymousCurrentUserContext.Instance, new SystemClock());
         }
 
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)

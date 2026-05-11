@@ -1,0 +1,60 @@
+- generic [ref=e1]:
+  - generic [ref=e174]: Switch to light theme
+  - generic [ref=e88]:
+    - banner [ref=e89]:
+      - toolbar [ref=e90]:
+        - button "Toggle navigation" [ref=e91] [cursor=pointer]
+        - heading "Wock" [level=6] [ref=e95]
+        - generic [ref=e96]:
+          - button "Switch to light theme" [active] [ref=e175] [cursor=pointer]
+          - link "Docs" [ref=e100] [cursor=pointer]:
+            - /url: https://learn.microsoft.com/aspnet/core/
+            - text: Docs
+    - complementary [ref=e102]:
+      - navigation [ref=e104]:
+        - link "Time Tracking" [ref=e106] [cursor=pointer]:
+          - /url: ""
+          - generic [ref=e108]: Time Tracking
+        - link "Reports" [ref=e111] [cursor=pointer]:
+          - /url: reports
+          - generic [ref=e113]: Reports
+        - link "Plugins" [ref=e116] [cursor=pointer]:
+          - /url: plugins
+          - generic [ref=e118]: Plugins
+        - link "Customers" [ref=e121] [cursor=pointer]:
+          - /url: customers
+          - generic [ref=e123]: Customers
+        - link "Booking Targets" [ref=e126] [cursor=pointer]:
+          - /url: booking-targets
+          - generic [ref=e128]: Booking Targets
+    - group [ref=e132]:
+      - heading "Customers" [level=3] [ref=e133]
+      - group [ref=e135]:
+        - heading "Create customer" [level=5] [ref=e136]
+        - generic [ref=e138]:
+          - textbox "Name" [ref=e140]
+          - generic: Name
+        - generic [ref=e142]:
+          - textbox "Notes" [ref=e144]
+          - generic: Notes
+        - button "Create customer" [ref=e145] [cursor=pointer]:
+          - generic [ref=e146]: Create customer
+      - heading "Active customers" [level=5] [ref=e147]
+      - table [ref=e150]:
+        - rowgroup [ref=e151]:
+          - row "Name Notes" [ref=e152]:
+            - columnheader "Name" [ref=e153]
+            - columnheader "Notes" [ref=e154]
+            - columnheader [ref=e155]
+        - rowgroup [ref=e156]:
+          - row "DGNB Save Deactivate" [ref=e157]:
+            - cell "DGNB" [ref=e158]:
+              - textbox "Customer name" [ref=e162]: DGNB
+            - cell [ref=e163]:
+              - textbox "Customer notes" [ref=e167]
+            - cell "Save Deactivate" [ref=e168]:
+              - generic [ref=e169]:
+                - button "Save" [ref=e170] [cursor=pointer]:
+                  - generic [ref=e171]: Save
+                - button "Deactivate" [ref=e172] [cursor=pointer]:
+                  - generic [ref=e173]: Deactivate

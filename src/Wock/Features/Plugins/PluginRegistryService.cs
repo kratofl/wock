@@ -99,7 +99,6 @@ public sealed class PluginRegistryService(
         installed.IsEnabled = false;
         installed.LastLoadStatus = package.Validation.Success ? PluginLoadStatus.NotLoaded : PluginLoadStatus.Failed;
         installed.LastLoadError = package.Validation.Error;
-        installed.UpdatedAt = now;
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return installed;
@@ -127,7 +126,6 @@ public sealed class PluginRegistryService(
             installed.LastLoadStatus = PluginLoadStatus.Disabled;
             installed.LastLoadError = null;
         }
-        installed.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return installed;
@@ -145,7 +143,6 @@ public sealed class PluginRegistryService(
 
         installed.LastLoadStatus = status;
         installed.LastLoadError = error;
-        installed.UpdatedAt = DateTime.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }

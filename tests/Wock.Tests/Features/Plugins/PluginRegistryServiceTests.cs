@@ -34,7 +34,8 @@ public sealed class PluginRegistryServiceTests : IAsyncLifetime
         Assert.Equal(PluginLoadStatus.NotLoaded, installed.LastLoadStatus);
         Assert.Null(installed.LastLoadError);
         Assert.Equal(DateTimeKind.Utc, installed.InstalledAt.Kind);
-        Assert.Equal(DateTimeKind.Utc, installed.UpdatedAt.Kind);
+        Assert.Equal(DateTimeKind.Utc, installed.CreatedAt.Kind);
+        Assert.Null(installed.ModifiedAt);
     }
 
     [Fact]
@@ -197,7 +198,7 @@ public sealed class PluginRegistryServiceTests : IAsyncLifetime
                 .UseSqlite(connection)
                 .Options;
 
-            return new AppDbContext(options);
+            return new AppDbContext(options, AnonymousCurrentUserContext.Instance, new SystemClock());
         }
 
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)

@@ -1,0 +1,78 @@
+- generic [ref=e164]:
+  - banner [ref=e165]:
+    - toolbar [ref=e166]:
+      - button "Toggle navigation" [active] [ref=e167] [cursor=pointer]
+      - heading "Wock" [level=6] [ref=e171]
+      - generic [ref=e172]:
+        - button "Switch to dark theme" [ref=e174] [cursor=pointer]
+        - link "Docs" [ref=e176] [cursor=pointer]:
+          - /url: https://learn.microsoft.com/aspnet/core/
+          - text: Docs
+  - complementary [ref=e178]:
+    - navigation [ref=e180]:
+      - link [ref=e323] [cursor=pointer]:
+        - /url: ""
+      - link [ref=e324] [cursor=pointer]:
+        - /url: reports
+      - link [ref=e325] [cursor=pointer]:
+        - /url: plugins
+      - link [ref=e326] [cursor=pointer]:
+        - /url: customers
+      - link [ref=e327] [cursor=pointer]:
+        - /url: booking-targets
+  - group [ref=e213]:
+    - group [ref=e214]:
+      - generic [ref=e215]: Dashboard
+      - heading "Time Tracking" [level=3] [ref=e216]
+    - generic [ref=e217]:
+      - group [ref=e220]:
+        - generic [ref=e223]: Timer state
+        - heading "Idle" [level=5] [ref=e224]
+      - group [ref=e227]:
+        - generic [ref=e230]: Active duration
+        - heading "00:00:00" [level=5] [ref=e231]
+      - group [ref=e234]:
+        - generic [ref=e237]: Today tracked
+        - heading "00:00:11" [level=5] [ref=e238]
+      - group [ref=e241]:
+        - generic [ref=e244]: This week
+        - heading "00:00:11" [level=5] [ref=e245]
+      - group [ref=e248]:
+        - generic [ref=e251]: Entries today
+        - heading "1" [level=5] [ref=e252]
+      - group [ref=e255]:
+        - generic [ref=e258]: Entries this week
+        - heading "1" [level=5] [ref=e259]
+      - group [ref=e262]:
+        - generic [ref=e265]: Active customers
+        - heading "1" [level=5] [ref=e266]
+      - group [ref=e269]:
+        - generic [ref=e272]: Booking targets
+        - heading "1" [level=5] [ref=e273]
+    - generic [ref=e274]:
+      - group [ref=e278]:
+        - generic [ref=e279]: Current timer
+        - heading "No active timer" [level=5] [ref=e280]
+        - paragraph [ref=e281]: Start tracking work to see the active timer here.
+      - group [ref=e284]:
+        - heading "New work entry" [level=5] [ref=e285]
+        - group [ref=e287]:
+          - generic [ref=e288]:
+            - generic [ref=e292]:
+              - generic [ref=e293] [cursor=pointer]:
+                - generic [ref=e294]: Select a customer
+                - img [ref=e296]
+              - generic: Customer
+            - generic [ref=e302]:
+              - generic [ref=e303] [cursor=pointer]:
+                - combobox "Booking target" [ref=e304]
+                - img [ref=e307]
+              - generic: Booking target
+            - generic [ref=e312]:
+              - textbox "External ticket" [ref=e314]
+              - generic: External ticket
+            - generic [ref=e318]:
+              - textbox "Description" [ref=e320]
+              - generic: Description
+          - button "Start tracking" [ref=e321] [cursor=pointer]:
+            - generic [ref=e322]: Start tracking

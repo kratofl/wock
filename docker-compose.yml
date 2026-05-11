@@ -7,7 +7,8 @@ services:
       - "8080:8080"
     environment:
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__WockDb: Data Source=/data/wock.db
+      Database__Provider: Sqlite
+      Database__ConnectionString: Data Source=/data/wock.db
       Plugins__StoragePath: /plugins
     volumes:
       - wock-data:/data

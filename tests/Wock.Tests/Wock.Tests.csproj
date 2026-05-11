@@ -18,11 +18,19 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="Wock.Common.Security" />
+    <Using Include="Wock.Common.Time" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Wock\Wock.csproj" />
     <ProjectReference Include="..\..\src\Wock.Abstractions\Wock.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\Wock.Domain\Wock.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Wock.Application\Wock.Application.csproj" />
+    <ProjectReference Include="..\..\src\Wock.Infrastructure\Wock.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Wock.Migrations.Sqlite\Wock.Migrations.Sqlite.csproj" />
+    <ProjectReference Include="..\..\src\Wock.Migrations.SqlServer\Wock.Migrations.SqlServer.csproj" />
+    <ProjectReference Include="..\..\src\Wock.Migrations.Postgres\Wock.Migrations.Postgres.csproj" />
   </ItemGroup>
 
 </Project>

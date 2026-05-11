@@ -1,0 +1,58 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - toolbar [ref=e4]:
+      - button "Toggle navigation" [ref=e5] [cursor=pointer]
+      - heading "Wock" [level=6] [ref=e9]
+      - generic [ref=e10]:
+        - button "Switch to dark theme" [ref=e12] [cursor=pointer]
+        - link "Docs" [ref=e14] [cursor=pointer]:
+          - /url: https://learn.microsoft.com/aspnet/core/
+          - text: Docs
+  - complementary [ref=e16]:
+    - navigation [ref=e18]:
+      - link "Time Tracking" [ref=e20] [cursor=pointer]:
+        - /url: ""
+        - generic [ref=e22]: Time Tracking
+      - link "Reports" [ref=e25] [cursor=pointer]:
+        - /url: reports
+        - generic [ref=e27]: Reports
+      - link "Plugins" [ref=e30] [cursor=pointer]:
+        - /url: plugins
+        - generic [ref=e32]: Plugins
+      - link "Customers" [ref=e35] [cursor=pointer]:
+        - /url: customers
+        - generic [ref=e37]: Customers
+      - link "Booking Targets" [ref=e40] [cursor=pointer]:
+        - /url: booking-targets
+        - generic [ref=e42]: Booking Targets
+  - group [ref=e46]:
+    - heading "Customers" [level=3] [ref=e47]
+    - group [ref=e49]:
+      - heading "Create customer" [level=5] [ref=e50]
+      - generic [ref=e52]:
+        - textbox "Name" [ref=e54]
+        - generic: Name
+      - generic [ref=e56]:
+        - textbox "Notes" [ref=e58]
+        - generic: Notes
+      - button "Create customer" [ref=e59] [cursor=pointer]:
+        - generic [ref=e60]: Create customer
+    - heading "Active customers" [level=5] [ref=e61]
+    - table [ref=e64]:
+      - rowgroup [ref=e65]:
+        - row "Name Notes" [ref=e66]:
+          - columnheader "Name" [ref=e67]
+          - columnheader "Notes" [ref=e68]
+          - columnheader [ref=e69]
+      - rowgroup [ref=e70]:
+        - row "DGNB Save Deactivate" [ref=e71]:
+          - cell "DGNB" [ref=e72]:
+            - textbox "Customer name" [ref=e76]: DGNB
+          - cell [ref=e77]:
+            - textbox "Customer notes" [ref=e81]
+          - cell "Save Deactivate" [ref=e82]:
+            - generic [ref=e83]:
+              - button "Save" [ref=e84] [cursor=pointer]:
+                - generic [ref=e85]: Save
+              - button "Deactivate" [ref=e86] [cursor=pointer]:
+                - generic [ref=e87]: Deactivate

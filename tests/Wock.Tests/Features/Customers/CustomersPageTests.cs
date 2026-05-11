@@ -2,6 +2,7 @@ using Bunit;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor.Services;
 using Wock.Data;
 using Wock.Features.Customers;
 
@@ -54,6 +55,8 @@ public sealed class CustomersPageTests
 
             var customerService = new CustomerService(factory);
             var testContext = new BunitContext();
+            testContext.JSInterop.Mode = JSRuntimeMode.Loose;
+            testContext.Services.AddMudServices(config => config.PopoverOptions.CheckForPopoverProvider = false);
             testContext.Services.AddSingleton<IDbContextFactory<AppDbContext>>(factory);
             testContext.Services.AddSingleton(customerService);
 
@@ -62,7 +65,7 @@ public sealed class CustomersPageTests
 
         public async ValueTask DisposeAsync()
         {
-            TestContext.Dispose();
+            await TestContext.DisposeAsync();
             await _connection.DisposeAsync();
         }
     }
@@ -75,7 +78,7 @@ public sealed class CustomersPageTests
                 .UseSqlite(connection)
                 .Options;
 
-            return new AppDbContext(options);
+            return new AppDbContext(options, AnonymousCurrentUserContext.Instance, new SystemClock());
         }
 
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)

@@ -1,0 +1,70 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - toolbar [ref=e4]:
+      - button "Toggle navigation" [ref=e5] [cursor=pointer]
+      - heading "Wock" [level=6] [ref=e9]
+      - generic [ref=e10]:
+        - button "Switch to dark theme" [ref=e12] [cursor=pointer]
+        - link "Docs" [ref=e14] [cursor=pointer]:
+          - /url: https://learn.microsoft.com/aspnet/core/
+          - text: Docs
+  - complementary [ref=e16]:
+    - navigation [ref=e18]:
+      - link "Time Tracking" [ref=e20] [cursor=pointer]:
+        - /url: ""
+        - generic [ref=e22]: Time Tracking
+      - link "Reports" [ref=e25] [cursor=pointer]:
+        - /url: reports
+        - generic [ref=e27]: Reports
+      - link "Plugins" [ref=e30] [cursor=pointer]:
+        - /url: plugins
+        - generic [ref=e32]: Plugins
+      - link "Customers" [ref=e35] [cursor=pointer]:
+        - /url: customers
+        - generic [ref=e37]: Customers
+      - link "Booking Targets" [ref=e40] [cursor=pointer]:
+        - /url: booking-targets
+        - generic [ref=e42]: Booking Targets
+  - group [ref=e46]:
+    - group [ref=e47]:
+      - generic [ref=e48]: Dashboard
+      - heading "Time Tracking" [level=3] [ref=e49]
+    - generic [ref=e50]:
+      - group [ref=e53]:
+        - generic [ref=e56]: Timer state
+        - heading "Idle" [level=5] [ref=e57]
+      - group [ref=e60]:
+        - generic [ref=e63]: Net duration
+        - heading "00:00:00" [level=5] [ref=e64]
+      - group [ref=e67]:
+        - generic [ref=e70]: Active customers
+        - heading "1" [level=5] [ref=e71]
+      - group [ref=e74]:
+        - generic [ref=e77]: Booking targets
+        - heading "1" [level=5] [ref=e78]
+    - group [ref=e81]:
+      - generic [ref=e82]: Current timer
+      - heading "No active timer" [level=5] [ref=e83]
+      - paragraph [ref=e84]: Start tracking work to see the active timer here.
+    - group [ref=e86]:
+      - heading "New work entry" [level=5] [ref=e87]
+      - group [ref=e89]:
+        - generic [ref=e90]:
+          - generic [ref=e94]:
+            - generic [ref=e95] [cursor=pointer]:
+              - generic [ref=e96]: Select a customer
+              - img [ref=e98]
+            - generic: Customer
+          - generic [ref=e104]:
+            - generic [ref=e105] [cursor=pointer]:
+              - combobox "Booking target" [ref=e106]
+              - img [ref=e108]
+            - generic: Booking target
+          - generic [ref=e113]:
+            - textbox "External ticket" [ref=e115]
+            - generic: External ticket
+          - generic [ref=e118]:
+            - textbox "Description" [ref=e120]
+            - generic: Description
+        - button "Start tracking" [ref=e121] [cursor=pointer]:
+          - generic [ref=e122]: Start tracking

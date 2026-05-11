@@ -1,60 +1,17 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Wock</a>
-    </div>
-</div>
-
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="time-tracking">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Time Tracking
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="reports">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Reports
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="plugins">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Plugins
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="customers">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Customers
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="booking-targets">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Booking Targets
-            </NavLink>
-        </div>
-    </nav>
-</div>
-
+﻿<MudNavMenu Class="wock-nav-menu">
+    <MudNavLink Href="" Match="NavLinkMatch.All" Ripple="false" Class="wock-nav-link">
+        <span class="wock-nav-content"><i class="fa-regular fa-clock wock-icon" aria-hidden="true"></i><span class="wock-nav-label">Time Tracking</span></span>
+    </MudNavLink>
+    <MudNavLink Href="reports" Ripple="false" Class="wock-nav-link">
+        <span class="wock-nav-content"><i class="fa-solid fa-chart-column wock-icon" aria-hidden="true"></i><span class="wock-nav-label">Reports</span></span>
+    </MudNavLink>
+    <MudNavLink Href="plugins" Ripple="false" Class="wock-nav-link">
+        <span class="wock-nav-content"><i class="fa-solid fa-puzzle-piece wock-icon" aria-hidden="true"></i><span class="wock-nav-label">Plugins</span></span>
+    </MudNavLink>
+    <MudNavLink Href="customers" Ripple="false" Class="wock-nav-link">
+        <span class="wock-nav-content"><i class="fa-solid fa-users wock-icon" aria-hidden="true"></i><span class="wock-nav-label">Customers</span></span>
+    </MudNavLink>
+    <MudNavLink Href="booking-targets" Ripple="false" Class="wock-nav-link">
+        <span class="wock-nav-content"><i class="fa-solid fa-list-check wock-icon" aria-hidden="true"></i><span class="wock-nav-label">Tasks</span></span>
+    </MudNavLink>
+</MudNavMenu>

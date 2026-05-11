@@ -1,37 +1,214 @@
+@page "/"
 @page "/time-tracking"
 @using Microsoft.EntityFrameworkCore
+@using Wock.Common.Time
+@using Wock.Components.Theme
 @using Wock.Data
 @using Wock.Features.TimeTracking.Components
 @using Wock.Models
+@implements IAsyncDisposable
 @inject TimeTrackingService TimeTracking
 @inject IDbContextFactory<AppDbContext> DbContextFactory
+@inject ISystemClock Clock
 
-<h1>Time Tracking</h1>
+<MudStack Spacing="3" Class="wock-page-stack">
+    <MudStack Spacing="1">
+        <MudText Typo="Typo.overline" Class="wock-page-kicker">Tracking home</MudText>
+        <MudText Typo="Typo.h3" Class="wock-page-title">Tasks & Time Tracking</MudText>
+        <MudText Typo="Typo.body1" Class="wock-muted">Start, resume, or switch tasks with one deliberate click.</MudText>
+    </MudStack>
 
-@if (!string.IsNullOrWhiteSpace(_message))
-{
-    <div class="alert alert-info">@_message</div>
-}
+    <StatusMessage Message="@_message" Kind="@_messageSeverity" />
 
-<ActiveTimerCard Entry="_activeEntry" NetDuration="_netDuration" OnPause="PauseAsync" OnResume="ResumeAsync" OnStop="StopAsync" />
+    <MudGrid Spacing="2" Class="wock-dashboard-panels">
+        <MudItem xs="12" lg="4" Class="wock-dashboard-panel">
+            <MudStack Spacing="2">
+                <ActiveTimerCard Entry="_activeEntry" NetDuration="_netDuration" Disabled="_isBusy" OnPause="PauseAsync" OnResume="ResumeAsync" OnStop="StopAsync" />
+                <MudPaper Elevation="0" Outlined="true" Class="wock-metric-card">
+                    <MudStack Spacing="1">
+                        <div class="wock-metric-heading">
+                            <i class="fa-solid fa-calendar-day wock-icon" aria-hidden="true"></i>
+                            <MudText Typo="Typo.overline" Class="wock-metric-label">Today tracked</MudText>
+                        </div>
+                        <MudText Typo="Typo.h5" Class="wock-metric-value">@FormatDuration(_todayDuration)</MudText>
+                        <MudText Typo="Typo.body2" Class="wock-muted">@_todayEntryCount entries today</MudText>
+                    </MudStack>
+                </MudPaper>
+                <MudPaper Elevation="0" Outlined="true" Class="wock-metric-card wock-graph-card">
+                    <MudStack Spacing="1">
+                        <div class="wock-metric-heading">
+                            <i class="fa-solid fa-chart-simple wock-icon" aria-hidden="true"></i>
+                            <MudText Typo="Typo.overline" Class="wock-metric-label">Week trend</MudText>
+                        </div>
+                        <MudText Typo="Typo.caption" Class="wock-muted">Minutes per day</MudText>
+                        <div class="wock-week-chart" aria-label="Tracked time Monday to Sunday">
+                            <MudChart T="double"
+                                      ChartType="ChartType.Bar"
+                                      ChartSeries="_weekChartSeries"
+                                      ChartLabels="_weekChartLabels"
+                                      ChartOptions="_weekChartOptions"
+                                      Width="100%"
+                                      Height="170px" />
+                        </div>
+                        <MudText Typo="Typo.caption" Class="wock-muted">Monday - Sunday</MudText>
+                        <MudText Typo="Typo.body2" Class="wock-muted">@FormatDuration(_weekDuration) this week</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudStack>
+        </MudItem>
 
-<section class="card">
-    <div class="card-body">
-        <h2 class="h5 card-title">Start tracking</h2>
-        <WorkEntryForm Customers="_customers" BookingTargets="_bookingTargets" Disabled="@(_activeEntry is not null)" OnStart="StartAsync" />
-    </div>
-</section>
+        <MudItem xs="12" lg="8" Class="wock-dashboard-panel">
+            <MudPaper Elevation="0" Outlined="true" Class="wock-section wock-quick-switch">
+                <MudStack Spacing="2">
+                    <div class="wock-section-heading">
+                        <div>
+                            <MudText Typo="Typo.h5">Tasks</MudText>
+                            <MudText Typo="Typo.body2" Class="wock-muted">Most recent tasks are first. Click a task to start or switch tracking.</MudText>
+                        </div>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_quickTasks.Count ready</MudChip>
+                    </div>
+
+                    @if (_quickTasks.Count > 4)
+                    {
+                        <MudTextField T="string" Label="Search tasks" @bind-Value="_taskSearch" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+                    }
+
+                    @if (_quickTasks.Count == 0)
+                    {
+                        <MudPaper Elevation="0" Outlined="true" Class="wock-empty-state">
+                            <MudStack Spacing="1">
+                                <MudText Typo="Typo.h6">No tasks ready yet</MudText>
+                                <MudText Typo="Typo.body2" Class="wock-muted">Create a customer and task once, then use this page for fast switching.</MudText>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="booking-targets">Create tasks</MudButton>
+                            </MudStack>
+                        </MudPaper>
+                    }
+                    else
+                    {
+                        var visibleTasks = VisibleQuickTasks;
+                        @if (visibleTasks.Count == 0)
+                        {
+                            <MudText Class="wock-muted">No tasks match the current search.</MudText>
+                        }
+                        else
+                        {
+                            <div class="wock-quick-task-list">
+                                @foreach (var task in visibleTasks)
+                                {
+                                    <MudButton Variant="@GetQuickTaskVariant(task)" Color="@GetQuickTaskColor(task)" FullWidth="true" Disabled="_isBusy" Class="@GetQuickTaskClass(task)" OnClick="() => ActivateTaskAsync(task.Id)">
+                                        <span class="wock-quick-task-content">
+                                            <span class="wock-quick-task-main">
+                                                <span class="wock-quick-task-title">@task.Name</span>
+                                                <span class="wock-quick-task-meta">@FormatTaskMeta(task)</span>
+                                            </span>
+                                            <span class="wock-quick-task-side">
+                                                <span class="wock-quick-task-duration">@FormatDuration(task.TodayDuration)</span>
+                                                <span class="wock-quick-task-action">@GetTaskActionLabel(task)</span>
+                                            </span>
+                                        </span>
+                                    </MudButton>
+                                }
+                            </div>
+                        }
+
+                        @if (HasHiddenQuickTasks)
+                        {
+                            <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="ShowAllTasks">Show all tasks</MudButton>
+                        }
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Elevation="0" Outlined="true" Class="wock-section wock-custom-start-panel">
+        <MudExpansionPanels Elevation="0" Class="wock-custom-start">
+            <MudExpansionPanel Text="Custom start with details" Disabled="@(_activeEntry is not null || _isBusy)">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.body2" Class="wock-muted">Use this when you need a one-off customer, ticket, or description before starting.</MudText>
+                    <WorkEntryForm Customers="_customers" BookingTargets="_bookingTargets" Disabled="@(_activeEntry is not null || _isBusy)" OnStart="StartAsync" />
+                </MudStack>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+    </MudPaper>
+</MudStack>
 
 @code {
+    private const int QuickTaskPreviewLimit = 12;
+
     private IReadOnlyList<Customer> _customers = [];
     private IReadOnlyList<BookingTarget> _bookingTargets = [];
+    private IReadOnlyList<QuickTaskItem> _quickTasks = [];
+    private IReadOnlyList<WorkEntry> _weekEntries = [];
+    private IReadOnlyList<WorkEntry> _todayEntries = [];
+    private string[] _weekChartLabels = [];
+    private List<ChartSeries<double>> _weekChartSeries = [];
+    private IReadOnlyDictionary<int, TimeSpan> _todayDurationsByTask = new Dictionary<int, TimeSpan>();
     private WorkEntry? _activeEntry;
     private TimeSpan _netDuration;
+    private TimeSpan _todayDuration;
+    private TimeSpan _weekDuration;
+    private DateTime _todayStart;
+    private DateTime _weekStart;
+    private int _todayEntryCount;
+    private string? _taskSearch;
+    private bool _showAllTasks;
+    private bool _isBusy;
     private string? _message;
+    private Severity _messageSeverity = Severity.Error;
+    private CancellationTokenSource? _liveRefreshCancellation;
+    private Task? _liveRefreshTask;
+    private readonly BarChartOptions _weekChartOptions = new()
+    {
+        ChartPalette = [WockTheme.Brand],
+        ShowLegend = false,
+        TooltipTitleFormat = "{{X_VALUE}}",
+        YAxisTicks = 15,
+        YAxisSuggestedMax = 15,
+        MaxNumYAxisTicks = 5,
+        YAxisFormat = "0",
+    };
+
+    private IReadOnlyList<QuickTaskItem> FilteredQuickTasks
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_taskSearch))
+            {
+                return _quickTasks;
+            }
+
+            var search = _taskSearch.Trim();
+            return _quickTasks
+                .Where(task => task.Matches(search))
+                .ToList();
+        }
+    }
+
+    private IReadOnlyList<QuickTaskItem> VisibleQuickTasks
+    {
+        get
+        {
+            var tasks = FilteredQuickTasks;
+            if (_showAllTasks || !string.IsNullOrWhiteSpace(_taskSearch))
+            {
+                return tasks;
+            }
+
+            return tasks
+                .Take(QuickTaskPreviewLimit)
+                .ToList();
+        }
+    }
+
+    private bool HasHiddenQuickTasks => string.IsNullOrWhiteSpace(_taskSearch)
+        && !_showAllTasks
+        && _quickTasks.Count > QuickTaskPreviewLimit;
 
     protected override async Task OnInitializedAsync()
     {
         await RefreshAsync();
+        StartLiveRefresh();
     }
 
     private async Task StartAsync(StartWorkEntryRequest request)
@@ -41,6 +218,11 @@
             request.BookingTargetId,
             request.ExternalTicketId,
             request.Description));
+    }
+
+    private async Task ActivateTaskAsync(int bookingTargetId)
+    {
+        await RunAndRefreshAsync(() => TimeTracking.SwitchToBookingTargetAsync(bookingTargetId));
     }
 
     private async Task PauseAsync()
@@ -60,6 +242,12 @@
 
     private async Task RunAndRefreshAsync(Func<Task<WorkEntry>> action)
     {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        _isBusy = true;
         try
         {
             await action();
@@ -68,9 +256,17 @@
         catch (Exception exception)
         {
             _message = exception.Message;
+            _messageSeverity = Severity.Error;
         }
 
-        await RefreshAsync();
+        try
+        {
+            await RefreshAsync();
+        }
+        finally
+        {
+            _isBusy = false;
+        }
     }
 
     private async Task RefreshAsync()
@@ -83,10 +279,272 @@
             .ToListAsync();
         _bookingTargets = await context.BookingTargets
             .AsNoTracking()
-            .Where(target => target.IsActive)
-            .OrderBy(target => target.Name)
+            .Include(target => target.Customer)
+            .Where(target => target.IsActive && target.Customer.IsActive)
+            .OrderBy(target => target.Customer.Name)
+            .ThenBy(target => target.Name)
             .ToListAsync();
+
         _activeEntry = await TimeTracking.GetActiveEntryAsync();
         _netDuration = _activeEntry is null ? TimeSpan.Zero : TimeTracking.GetNetDuration(_activeEntry);
+        await RefreshMetricsAsync(context);
+        await RefreshQuickTasksAsync(context);
+    }
+
+    private async Task RefreshMetricsAsync(AppDbContext context)
+    {
+        var now = Clock.UtcNow;
+        _todayStart = now.Date;
+        _weekStart = GetStartOfWeek(_todayStart);
+        var weekEnd = _weekStart.AddDays(7);
+        _weekEntries = await context.WorkEntries
+            .AsNoTracking()
+            .Include(entry => entry.Pauses)
+            .Where(entry => entry.StartedAt >= _weekStart && entry.StartedAt < weekEnd)
+            .OrderByDescending(entry => entry.StartedAt)
+            .ToListAsync();
+        _todayEntries = _weekEntries
+            .Where(entry => entry.StartedAt >= _todayStart)
+            .ToList();
+
+        _todayEntryCount = _todayEntries.Count;
+        _weekChartLabels = Enumerable.Range(0, 7)
+            .Select(index => FormatDayLabel(_weekStart.AddDays(index)))
+            .ToArray();
+        RefreshLiveDurations(now);
+    }
+
+    private void RefreshLiveDurations(DateTime now)
+    {
+        _netDuration = _activeEntry is null ? TimeSpan.Zero : TimeTracking.GetNetDuration(_activeEntry, now);
+        _todayDuration = SumNetDuration(_todayEntries, now);
+        _weekDuration = SumNetDuration(_weekEntries, now);
+        _todayDurationsByTask = _todayEntries
+            .Where(entry => entry.BookingTargetId.HasValue)
+            .GroupBy(entry => entry.BookingTargetId!.Value)
+            .ToDictionary(group => group.Key, group => SumNetDuration(group, now));
+        if (_quickTasks.Count > 0)
+        {
+            _quickTasks = _quickTasks
+                .Select(task => task with
+                {
+                    TodayDuration = _todayDurationsByTask.TryGetValue(task.Id, out var todayDuration)
+                        ? todayDuration
+                        : TimeSpan.Zero
+                })
+                .ToList();
+        }
+
+        RefreshWeekChartSeries(now);
+    }
+
+    private void RefreshWeekChartSeries(DateTime now)
+    {
+        var dailyDurations = Enumerable.Range(0, 7)
+            .Select(index => SumNetDuration(_weekEntries.Where(entry => entry.StartedAt.Date == _weekStart.AddDays(index)), now))
+            .ToArray();
+        _weekChartSeries =
+        [
+            new ChartSeries<double>
+            {
+                Name = "Tracked minutes",
+                Data = dailyDurations.Select(duration => Math.Round(duration.TotalMinutes, 1)).ToArray(),
+                TooltipYValueFormat = "0.# min",
+            },
+        ];
+    }
+
+    private async Task RefreshQuickTasksAsync(AppDbContext context)
+    {
+        var lastStartsByTask = await context.WorkEntries
+            .AsNoTracking()
+            .Where(entry => entry.BookingTargetId.HasValue)
+            .GroupBy(entry => entry.BookingTargetId!.Value)
+            .Select(group => new
+            {
+                BookingTargetId = group.Key,
+                LastStartedAt = group.Max(entry => entry.StartedAt)
+            })
+            .ToDictionaryAsync(item => item.BookingTargetId, item => item.LastStartedAt);
+
+        _quickTasks = _bookingTargets
+            .Select(target =>
+            {
+                lastStartsByTask.TryGetValue(target.Id, out var lastStartedAt);
+                _todayDurationsByTask.TryGetValue(target.Id, out var todayDuration);
+                var isActive = _activeEntry?.BookingTargetId == target.Id;
+
+                return new QuickTaskItem(
+                    target.Id,
+                    target.Customer.Name,
+                    target.Name,
+                    target.BookingSoftware,
+                    target.BookingTicketId,
+                    lastStartedAt,
+                    isActive,
+                    isActive && _activeEntry?.Status == WorkEntryStatus.Paused,
+                    todayDuration);
+            })
+            .OrderByDescending(task => task.IsActive)
+            .ThenByDescending(task => task.LastStartedAt.HasValue)
+            .ThenByDescending(task => task.LastStartedAt)
+            .ThenBy(task => task.CustomerName)
+            .ThenBy(task => task.Name)
+            .ToList();
+    }
+
+    private void ShowAllTasks()
+    {
+        _showAllTasks = true;
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        return $"{(int)duration.TotalHours:00}:{duration.Minutes:00}:{duration.Seconds:00}";
+    }
+
+    private static string FormatDayLabel(DateTime date)
+    {
+        return date.DayOfWeek switch
+        {
+            DayOfWeek.Monday => "Mo",
+            DayOfWeek.Tuesday => "Tu",
+            DayOfWeek.Wednesday => "We",
+            DayOfWeek.Thursday => "Th",
+            DayOfWeek.Friday => "Fr",
+            DayOfWeek.Saturday => "Sa",
+            _ => "Su"
+        };
+    }
+
+    private static DateTime GetStartOfWeek(DateTime date)
+    {
+        var daysSinceMonday = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+        return date.Date.AddDays(-daysSinceMonday);
+    }
+
+    private TimeSpan SumNetDuration(IEnumerable<WorkEntry> entries, DateTime now)
+    {
+        return entries.Aggregate(TimeSpan.Zero, (total, entry) => total + TimeTracking.GetNetDuration(entry, now));
+    }
+
+    private static string FormatTaskMeta(QuickTaskItem task)
+    {
+        return $"{task.CustomerName} - {task.BookingSoftware} {task.BookingTicketId}";
+    }
+
+    private string GetTaskActionLabel(QuickTaskItem task)
+    {
+        if (task.IsPaused)
+        {
+            return "Resume";
+        }
+
+        if (task.IsActive)
+        {
+            return "Tracking";
+        }
+
+        return _activeEntry is null ? "Start" : "Switch";
+    }
+
+    private static Variant GetQuickTaskVariant(QuickTaskItem task)
+    {
+        return task.IsActive ? Variant.Filled : Variant.Outlined;
+    }
+
+    private static Color GetQuickTaskColor(QuickTaskItem task)
+    {
+        return task.IsActive || task.IsPaused ? Color.Primary : Color.Default;
+    }
+
+    private static string GetQuickTaskClass(QuickTaskItem task)
+    {
+        var cssClass = "wock-quick-task";
+        if (task.IsPaused)
+        {
+            cssClass += " wock-quick-task-paused";
+        }
+
+        return cssClass;
+    }
+
+    private void StartLiveRefresh()
+    {
+        _liveRefreshCancellation = new CancellationTokenSource();
+        _liveRefreshTask = RunLiveRefreshAsync(_liveRefreshCancellation.Token);
+    }
+
+    private async Task RunLiveRefreshAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(RefreshLiveTrackingAsync);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task RefreshLiveTrackingAsync()
+    {
+        var now = Clock.UtcNow;
+        var crossedDateBoundary = now.Date != _todayStart || GetStartOfWeek(now.Date) != _weekStart;
+        var hasRunningEntry = _activeEntry?.Status == WorkEntryStatus.Running;
+        if (!crossedDateBoundary && !hasRunningEntry)
+        {
+            return;
+        }
+
+        if (!_isBusy && crossedDateBoundary)
+        {
+            await RefreshAsync();
+        }
+        else
+        {
+            RefreshLiveDurations(now);
+        }
+
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_liveRefreshCancellation is null)
+        {
+            return;
+        }
+
+        await _liveRefreshCancellation.CancelAsync();
+        if (_liveRefreshTask is not null)
+        {
+            await _liveRefreshTask;
+        }
+
+        _liveRefreshCancellation.Dispose();
+    }
+
+    private sealed record QuickTaskItem(
+        int Id,
+        string CustomerName,
+        string Name,
+        string BookingSoftware,
+        string BookingTicketId,
+        DateTime? LastStartedAt,
+        bool IsActive,
+        bool IsPaused,
+        TimeSpan TodayDuration)
+    {
+        public bool Matches(string search)
+        {
+            return Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || CustomerName.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || BookingSoftware.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || BookingTicketId.Contains(search, StringComparison.OrdinalIgnoreCase);
+        }
     }
 }

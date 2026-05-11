@@ -12,11 +12,19 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.7" />
+    <PackageReference Include="MudBlazor" Version="9.4.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Wock.Abstractions\Wock.Abstractions.csproj" />
+    <ProjectReference Include="..\Wock.Domain\Wock.Domain.csproj" />
+    <ProjectReference Include="..\Wock.Application\Wock.Application.csproj" />
+    <ProjectReference Include="..\Wock.Infrastructure\Wock.Infrastructure.csproj" />
+    <ProjectReference Include="..\Wock.Migrations.Sqlite\Wock.Migrations.Sqlite.csproj" />
+    <ProjectReference Include="..\Wock.Migrations.SqlServer\Wock.Migrations.SqlServer.csproj" />
+    <ProjectReference Include="..\Wock.Migrations.Postgres\Wock.Migrations.Postgres.csproj" />
   </ItemGroup>
 
 </Project>

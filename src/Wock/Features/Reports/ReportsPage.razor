@@ -1,120 +1,127 @@
 @page "/reports"
+@using System.Globalization
 @using Wock.Models
 @inject ReportService ReportService
 
-<h1>Reports</h1>
+<MudStack Spacing="3" Class="wock-page-stack">
+    <MudText Typo="Typo.h3">Reports</MudText>
 
-@if (!string.IsNullOrWhiteSpace(_message))
-{
-    <div class="alert alert-info">@_message</div>
-}
+    <StatusMessage Message="@_message" Kind="@_messageSeverity" />
 
-<section class="card mb-4">
-    <div class="card-body">
-        <h2 class="h5 card-title">Filters</h2>
-        <div class="row g-3">
-            <div class="col-md-3">
-                <label for="report-from" class="form-label">From</label>
-                <input id="report-from" type="date" class="form-control" value="@FormatDate(_fromDate)" @onchange="FromDateChanged" />
-            </div>
-            <div class="col-md-3">
-                <label for="report-to" class="form-label">To</label>
-                <input id="report-to" type="date" class="form-control" value="@FormatDate(_toDate)" @onchange="ToDateChanged" />
-            </div>
-            <div class="col-md-3">
-                <label for="report-customer" class="form-label">Customer</label>
-                <select id="report-customer" class="form-select" value="@_selectedCustomerId" @onchange="CustomerChanged">
-                    <option value="">All customers</option>
-                    @foreach (var customer in _customers)
-                    {
-                        <option value="@customer.Id">@customer.Name</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="report-booking-target" class="form-label">Booking target</label>
-                <select id="report-booking-target" class="form-select" value="@_selectedBookingTargetId" @onchange="BookingTargetChanged">
-                    <option value="">All booking targets</option>
-                    @foreach (var target in _bookingTargets)
-                    {
-                        <option value="@target.Id">@target.Customer.Name - @target.Name</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label for="report-external-ticket" class="form-label">External ticket</label>
-                <input id="report-external-ticket" class="form-control" value="@_externalTicketId" @oninput="ExternalTicketChanged" />
-            </div>
-            <div class="col-md-8 d-flex align-items-end gap-2">
-                <button type="button" class="btn btn-primary" @onclick="LoadReportAsync">Apply filters</button>
-                <button type="button" class="btn btn-secondary" @onclick="ExportCsvAsync">Export CSV</button>
-                @if (_csvDownloadUrl is not null)
-                {
-                    <a class="btn btn-outline-secondary" href="@_csvDownloadUrl" download="wock-report.csv">Download CSV</a>
-                }
-            </div>
-            <div class="col-12">
-                <span class="form-label d-block">Booking connectors</span>
-                @if (_bookingConnectors.Count == 0)
-                {
-                    <span class="text-muted">No enabled booking connectors.</span>
-                }
-                else
-                {
-                    <ul class="mb-0">
-                        @foreach (var connector in _bookingConnectors)
+    <MudPaper Elevation="0" Class="wock-section">
+        <MudStack Spacing="3">
+            <MudText Typo="Typo.h5">Filters</MudText>
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudDatePicker Label="From" Date="@FromDateValue" DateChanged="FromDateChanged" DateFormat="yyyy-MM-dd" FirstDayOfWeek="DayOfWeek.Monday" AutoClose="true" PickerVariant="PickerVariant.Dialog" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudDatePicker Label="To" Date="@ToDateValue" DateChanged="ToDateChanged" DateFormat="yyyy-MM-dd" FirstDayOfWeek="DayOfWeek.Monday" AutoClose="true" PickerVariant="PickerVariant.Dialog" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="int?" Label="Customer" Value="@_selectedCustomerId" ValueChanged="CustomerChanged" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var customer in _customers)
                         {
-                            <li>@connector.Name (@connector.Version)</li>
+                            <MudSelectItem T="int?" Value="@customer.Id">@customer.Name</MudSelectItem>
                         }
-                    </ul>
-                }
-            </div>
-        </div>
-    </div>
-</section>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="int?" Label="Task" Value="@_selectedBookingTargetId" ValueChanged="TaskChanged" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var task in AvailableTasks)
+                        {
+                            <MudSelectItem T="int?" Value="@task.Id">@FormatTaskOption(task)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField T="string" Label="External ticket" Value="@_externalTicketId" ValueChanged="ExternalTicketChanged" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" md="8">
+                    <div class="wock-button-row">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadReportAsync">Apply filters</MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="ExportCsvAsync">Export CSV</MudButton>
+                        @if (_csvDownloadUrl is not null)
+                        {
+                            <MudButton Variant="Variant.Text" Color="Color.Default" Href="@_csvDownloadUrl" download="wock-report.csv">Download CSV</MudButton>
+                        }
+                    </div>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle1">Booking connectors</MudText>
+                    @if (_bookingConnectors.Count == 0)
+                    {
+                        <MudText Class="wock-muted">No enabled booking connectors.</MudText>
+                    }
+                    else
+                    {
+                        <MudList T="string" Dense="true">
+                            @foreach (var connector in _bookingConnectors)
+                            {
+                                <MudListItem>@connector.Name (@connector.Version)</MudListItem>
+                            }
+                        </MudList>
+                    }
+                </MudItem>
+            </MudGrid>
+        </MudStack>
+    </MudPaper>
 
-<table class="table table-sm">
-    <thead>
-        <tr>
-            <th>Date</th>
-            <th>Customer</th>
-            <th>Booking software</th>
-            <th>Booking ticket ID</th>
-            <th>External ticket ID</th>
-            <th>Description</th>
-            <th>Start</th>
-            <th>Stop</th>
-            <th>Pause duration</th>
-            <th>Net duration</th>
-        </tr>
-    </thead>
-    <tbody>
-        @if (_rows.Count == 0)
-        {
-            <tr>
-                <td colspan="10">No stopped work entries match the selected filters.</td>
-            </tr>
-        }
-        else
-        {
-            @foreach (var row in _rows)
-            {
-                <tr>
-                    <td>@row.Date.ToString("yyyy-MM-dd")</td>
-                    <td>@row.Customer</td>
-                    <td>@row.BookingSoftware</td>
-                    <td>@row.BookingTicketId</td>
-                    <td>@row.ExternalTicketId</td>
-                    <td>@row.Description</td>
-                    <td>@row.Start.ToString("yyyy-MM-dd HH:mm:ss")</td>
-                    <td>@row.Stop.ToString("yyyy-MM-dd HH:mm:ss")</td>
-                    <td>@row.PauseDuration</td>
-                    <td>@row.NetDuration</td>
-                </tr>
-            }
-        }
-    </tbody>
-</table>
+    <MudTable Items="_rows" Hover="true" Dense="true">
+        <HeaderContent>
+            <MudTh>Date</MudTh>
+            <MudTh>Customer</MudTh>
+            <MudTh>Task</MudTh>
+            <MudTh>Reference</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh>Time</MudTh>
+            <MudTh>Paused</MudTh>
+            <MudTh>Net</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Date">@context.Date.ToString("yyyy-MM-dd")</MudTd>
+            <MudTd DataLabel="Customer">@context.CustomerName</MudTd>
+            <MudTd DataLabel="Task">@FormatTaskName(context)</MudTd>
+            <MudTd DataLabel="Reference">
+                <MudStack Spacing="1">
+                    @if (HasBookingReference(context))
+                    {
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Booking</MudChip>
+                            <MudText Typo="Typo.body2">@FormatBookingReference(context)</MudText>
+                        </MudStack>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(context.ExternalReference))
+                    {
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">External</MudChip>
+                            <MudText Typo="Typo.body2">@context.ExternalReference</MudText>
+                        </MudStack>
+                    }
+                    @if (!HasBookingReference(context) && string.IsNullOrWhiteSpace(context.ExternalReference))
+                    {
+                        <MudText Typo="Typo.body2" Class="wock-muted">No reference</MudText>
+                    }
+                </MudStack>
+            </MudTd>
+            <MudTd DataLabel="Description">@(context.Description ?? string.Empty)</MudTd>
+            <MudTd DataLabel="Time">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.body2">@FormatClock(context.Start) - @FormatClock(context.Stop)</MudText>
+                    @if (context.Start.Date != context.Stop.Date)
+                    {
+                        <MudText Typo="Typo.caption" Class="wock-muted">@FormatDateTime(context.Stop)</MudText>
+                    }
+                </MudStack>
+            </MudTd>
+            <MudTd DataLabel="Paused">@FormatDuration(context.PauseDuration)</MudTd>
+            <MudTd DataLabel="Net">@FormatDuration(context.NetDuration)</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No stopped work entries match the selected filters.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudStack>
 
 @code {
     private IReadOnlyList<Customer> _customers = [];
@@ -127,7 +134,18 @@
     private int? _selectedBookingTargetId = null;
     private string? _externalTicketId = null;
     private string? _message;
+    private Severity _messageSeverity = Severity.Info;
     private string? _csvDownloadUrl;
+
+    private DateTime? FromDateValue => _fromDate.ToDateTime(TimeOnly.MinValue);
+
+    private DateTime? ToDateValue => _toDate.ToDateTime(TimeOnly.MinValue);
+
+    private IReadOnlyList<BookingTarget> AvailableTasks => _selectedCustomerId is null
+        ? _bookingTargets
+        : _bookingTargets
+            .Where(task => task.CustomerId == _selectedCustomerId.Value)
+            .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -143,6 +161,7 @@
         if (_fromDate > _toDate)
         {
             _message = "From date must be on or before To date.";
+            _messageSeverity = Severity.Warning;
             _rows = [];
             _csvDownloadUrl = null;
             return;
@@ -165,6 +184,7 @@
         var csv = ReportService.ExportCsv(_rows);
         _csvDownloadUrl = $"data:text/csv;charset=utf-8,{Uri.EscapeDataString(csv)}";
         _message = "CSV export is ready.";
+        _messageSeverity = Severity.Success;
     }
 
     private ReportFilter CurrentFilter()
@@ -177,44 +197,94 @@
             _externalTicketId);
     }
 
-    private void FromDateChanged(ChangeEventArgs args)
+    private void FromDateChanged(DateTime? value)
     {
-        if (DateOnly.TryParse(args.Value?.ToString(), out var date))
+        if (value.HasValue)
         {
-            _fromDate = date;
+            _fromDate = DateOnly.FromDateTime(value.Value);
         }
     }
 
-    private void ToDateChanged(ChangeEventArgs args)
+    private void ToDateChanged(DateTime? value)
     {
-        if (DateOnly.TryParse(args.Value?.ToString(), out var date))
+        if (value.HasValue)
         {
-            _toDate = date;
+            _toDate = DateOnly.FromDateTime(value.Value);
         }
     }
 
-    private void CustomerChanged(ChangeEventArgs args)
+    private void CustomerChanged(int? customerId)
     {
-        _selectedCustomerId = ParseNullableInt(args.Value?.ToString());
+        _selectedCustomerId = customerId;
+        if (_selectedBookingTargetId is not null && !AvailableTasks.Any(task => task.Id == _selectedBookingTargetId))
+        {
+            _selectedBookingTargetId = null;
+        }
     }
 
-    private void BookingTargetChanged(ChangeEventArgs args)
+    private void TaskChanged(int? bookingTargetId)
     {
-        _selectedBookingTargetId = ParseNullableInt(args.Value?.ToString());
+        _selectedBookingTargetId = bookingTargetId;
+        if (bookingTargetId is null)
+        {
+            return;
+        }
+
+        var task = _bookingTargets.SingleOrDefault(task => task.Id == bookingTargetId.Value);
+        if (task is not null)
+        {
+            _selectedCustomerId = task.CustomerId;
+        }
     }
 
-    private void ExternalTicketChanged(ChangeEventArgs args)
+    private void ExternalTicketChanged(string? externalTicketId)
     {
-        _externalTicketId = args.Value?.ToString();
+        _externalTicketId = externalTicketId;
     }
 
-    private static int? ParseNullableInt(string? value)
+    private static string FormatTaskOption(BookingTarget task)
     {
-        return int.TryParse(value, out var id) ? id : null;
+        return $"{task.Customer.Name} - {task.Name}";
     }
 
-    private static string FormatDate(DateOnly date)
+    private static string FormatTaskName(ReportRow row)
     {
-        return date.ToString("yyyy-MM-dd");
+        return row.TaskName ?? "Custom tracking";
+    }
+
+    private static bool HasBookingReference(ReportRow row)
+    {
+        return !string.IsNullOrWhiteSpace(row.BookingSystem)
+            || !string.IsNullOrWhiteSpace(row.BookingReference);
+    }
+
+    private static string FormatBookingReference(ReportRow row)
+    {
+        if (string.IsNullOrWhiteSpace(row.BookingSystem))
+        {
+            return row.BookingReference ?? string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(row.BookingReference))
+        {
+            return row.BookingSystem;
+        }
+
+        return $"{row.BookingSystem} {row.BookingReference}";
+    }
+
+    private static string FormatClock(DateTime value)
+    {
+        return value.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatDateTime(DateTime value)
+    {
+        return value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        return $"{(int)duration.TotalHours:00}:{duration.Minutes:00}:{duration.Seconds:00}";
     }
 }

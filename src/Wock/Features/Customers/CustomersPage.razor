@@ -2,68 +2,61 @@
 @using Wock.Models
 @inject CustomerService CustomerService
 
-<h1>Customers</h1>
+<MudStack Spacing="3" Class="wock-page-stack">
+    <MudText Typo="Typo.h3">Customers</MudText>
 
-@if (!string.IsNullOrWhiteSpace(_message))
-{
-    <div class="alert alert-info">@_message</div>
-}
+    <StatusMessage Message="@_message" Kind="@_messageSeverity" />
 
-<section class="mb-4">
-    <h2 class="h4">Create customer</h2>
-    <div class="mb-3">
-        <label for="customer-name" class="form-label">Name</label>
-        <input id="customer-name" class="form-control" @bind="_newCustomer.Name" />
-    </div>
-    <div class="mb-3">
-        <label for="customer-notes" class="form-label">Notes</label>
-        <textarea id="customer-notes" class="form-control" @bind="_newCustomer.Notes"></textarea>
-    </div>
-    <button type="button" class="btn btn-primary" @onclick="CreateAsync">Create customer</button>
-</section>
+    <MudPaper Elevation="0" Class="wock-section">
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.h5">Create customer</MudText>
+            <MudTextField T="string" Label="Name" @bind-Value="_newCustomer.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <MudTextField T="string" Label="Notes" Lines="3" @bind-Value="_newCustomer.Notes" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateAsync">Create customer</MudButton>
+        </MudStack>
+    </MudPaper>
 
-<h2 class="h4">Active customers</h2>
+    <MudText Typo="Typo.h5">Active customers</MudText>
 
-@if (_customers.Count == 0)
-{
-    <p>No active customers.</p>
-}
-else
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Notes</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var customer in _customers)
-            {
-                var model = _editModels[customer.Id];
-                <tr>
-                    <td>
-                        <input class="form-control" aria-label="Customer name" @bind="model.Name" />
-                    </td>
-                    <td>
-                        <input class="form-control" aria-label="Customer notes" @bind="model.Notes" />
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-secondary me-2" @onclick="() => UpdateAsync(customer.Id)">Save</button>
-                        <button type="button" class="btn btn-sm btn-warning" @onclick="() => DeactivateAsync(customer.Id)">Deactivate</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+    @if (_customers.Count == 0)
+    {
+        <MudText>No active customers.</MudText>
+    }
+    else
+    {
+        <MudTable Items="_customers" Hover="true" Dense="true">
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Notes</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate Context="customer">
+                @{
+                    var model = _editModels[customer.Id];
+                }
+                <MudTd DataLabel="Name">
+                    <MudTextField T="string" aria-label="Customer name" @bind-Value="model.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudTd>
+                <MudTd DataLabel="Notes">
+                    <MudTextField T="string" aria-label="Customer notes" @bind-Value="model.Notes" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudTd>
+                <MudTd>
+                    <div class="wock-button-row">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small" OnClick="() => UpdateAsync(customer.Id)">Save</MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small" OnClick="() => DeactivateAsync(customer.Id)">Deactivate</MudButton>
+                    </div>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudStack>
 
 @code {
     private readonly CustomerFormModel _newCustomer = new();
     private readonly Dictionary<int, CustomerFormModel> _editModels = [];
     private IReadOnlyList<Customer> _customers = [];
     private string? _message;
+    private Severity _messageSeverity = Severity.Info;
 
     protected override async Task OnInitializedAsync()
     {
@@ -78,10 +71,12 @@ else
             _newCustomer.Name = string.Empty;
             _newCustomer.Notes = string.Empty;
             _message = "Customer created.";
+            _messageSeverity = Severity.Success;
         }
         catch (Exception exception)
         {
             _message = exception.Message;
+            _messageSeverity = Severity.Error;
         }
 
         await RefreshAsync();
@@ -94,10 +89,12 @@ else
             var model = _editModels[customerId];
             await CustomerService.UpdateAsync(customerId, model.Name, model.Notes);
             _message = "Customer updated.";
+            _messageSeverity = Severity.Success;
         }
         catch (Exception exception)
         {
             _message = exception.Message;
+            _messageSeverity = Severity.Error;
         }
 
         await RefreshAsync();
@@ -109,10 +106,12 @@ else
         {
             await CustomerService.DeactivateAsync(customerId);
             _message = "Customer deactivated.";
+            _messageSeverity = Severity.Success;
         }
         catch (Exception exception)
         {
             _message = exception.Message;
+            _messageSeverity = Severity.Error;
         }
 
         await RefreshAsync();
@@ -136,6 +135,6 @@ else
     {
         public string Name { get; set; } = string.Empty;
 
-        public string? Notes { get; set; }
+        public string Notes { get; set; } = string.Empty;
     }
 }

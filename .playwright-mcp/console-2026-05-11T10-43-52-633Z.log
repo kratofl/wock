@@ -1,0 +1,4 @@
+[     315ms] [INFO] [2026-05-11T10:43:52.946Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:5099/_blazor'. @ http://127.0.0.1:5099/_framework/blazor.web.hwaxidwiwj.js:0
+[     361ms] [INFO] [2026-05-11T10:43:52.993Z] Information: WebSocket connected to ws://127.0.0.1:5099/_blazor?id=5jEx0KjT9XfHMWnNpUywqw. @ http://127.0.0.1:5099/_framework/blazor.web.hwaxidwiwj.js:0
+[   34937ms] [INFO] [2026-05-11T10:44:27.570Z] Information: Normalizing '_blazor' to 'http://127.0.0.1:5099/_blazor'. @ http://127.0.0.1:5099/_framework/blazor.web.hwaxidwiwj.js:0
+[   34944ms] [INFO] [2026-05-11T10:44:27.576Z] Information: WebSocket connected to ws://127.0.0.1:5099/_blazor?id=3mfDkp6a7UClSB85nCa3pw. @ http://127.0.0.1:5099/_framework/blazor.web.hwaxidwiwj.js:0

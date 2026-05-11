@@ -123,8 +123,7 @@ public sealed class CustomerServiceTests : IAsyncLifetime
         {
             Name = name,
             Notes = notes,
-            IsActive = isActive,
-            CreatedAt = DateTime.UtcNow
+            IsActive = isActive
         };
         context.Customers.Add(customer);
         await context.SaveChangesAsync();
@@ -139,7 +138,7 @@ public sealed class CustomerServiceTests : IAsyncLifetime
                 .UseSqlite(connection)
                 .Options;
 
-            return new AppDbContext(options);
+            return new AppDbContext(options, AnonymousCurrentUserContext.Instance, new SystemClock());
         }
 
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)

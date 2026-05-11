@@ -1,23 +1,94 @@
 ﻿@inherits LayoutComponentBase
+@inject IJSRuntime JSRuntime
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<MudThemeProvider Theme="@WockTheme.Theme" @bind-IsDarkMode="_isDarkMode" ObserveSystemDarkModeChange="false" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+<MudLayout Class="@LayoutCssClass">
+    <MudAppBar Elevation="0" Class="wock-app-bar">
+        <button type="button" class="wock-icon-button" @onclick="ToggleDrawer" aria-label="Toggle navigation">
+            <i class="fa-solid fa-bars wock-icon" aria-hidden="true"></i>
+        </button>
+        <div class="wock-shell-brand">
+            <span class="wock-brand-mark" aria-hidden="true"></span>
+            <MudText Typo="Typo.h6">Wock</MudText>
         </div>
+        <MudSpacer />
+        <div class="wock-header-actions">
+            <MudTooltip Text="@ThemeToggleLabel">
+                <button type="button" class="wock-icon-button" @onclick="ToggleThemeAsync" aria-label="@ThemeToggleLabel">
+                    <i class="@ThemeToggleIconClass" aria-hidden="true"></i>
+                </button>
+            </MudTooltip>
+            <a class="wock-header-link" href="https://learn.microsoft.com/aspnet/core/" target="_blank" rel="noopener noreferrer">
+                Docs
+                <i class="fa-solid fa-arrow-up-right-from-square wock-icon wock-icon-sm" aria-hidden="true"></i>
+            </a>
+        </div>
+    </MudAppBar>
 
-        <article class="content px-4">
+    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Mini" ClipMode="DrawerClipMode.Always" Elevation="0" Class="wock-drawer" Width="14.5rem" MiniWidth="3.5rem">
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="wock-main-content">
             @Body
-        </article>
-    </main>
-</div>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private const string ThemePreferenceKey = "wock.theme";
+
+    private bool _drawerOpen = true;
+    private bool _isDarkMode;
+
+    private string LayoutCssClass => _isDarkMode
+        ? "wock-layout wock-layout-dark"
+        : "wock-layout";
+
+    private string ThemeToggleIconClass => _isDarkMode
+        ? "fa-regular fa-sun wock-icon"
+        : "fa-regular fa-moon wock-icon";
+
+    private string ThemeToggleLabel => _isDarkMode
+        ? "Switch to light theme"
+        : "Switch to dark theme";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _isDarkMode = await GetInitialDarkModeAsync();
+        StateHasChanged();
+    }
+
+    private async Task<bool> GetInitialDarkModeAsync()
+    {
+        var savedTheme = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", ThemePreferenceKey);
+        return savedTheme == "dark";
+    }
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private async Task ToggleThemeAsync()
+    {
+        _isDarkMode = !_isDarkMode;
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", ThemePreferenceKey, _isDarkMode ? "dark" : "light");
+    }
+}
