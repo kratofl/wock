@@ -106,12 +106,50 @@ public sealed class ReportServiceTests : IAsyncLifetime
         var csv = await service.ExportCsvAsync(new ReportFilter(new DateOnly(2026, 5, 7), new DateOnly(2026, 5, 7)));
 
         var lines = csv.Split("\r\n");
-        Assert.Equal("Date,Customer,Task,Booking system,Booking reference,External reference,Description,Start,Stop,Pause duration,Net duration", lines[0]);
+        Assert.Equal("Date,Customer,Project,Task,Activity category,Billable,Review status,Hourly rate,Billable amount,Booking system,Booking reference,External reference,Description,Start,Stop,Pause duration,Net duration", lines[0]);
         Assert.Contains("\"Acme, Inc.\"", csv);
         Assert.Contains("Target", csv);
         Assert.Contains("\"Jira \"\"Cloud\"\"\"", csv);
         Assert.Contains("\"Line one\r\nLine \"\"two\"\", with comma\"", csv);
         Assert.Contains("00:01:00,00:59:00", csv);
+    }
+
+    [Fact]
+    public async Task GetReportAsync_filters_by_project_status_and_billable_and_calculates_amount()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        var customer = await AddCustomerAsync(context, "Acme", defaultHourlyRate: 100m);
+        var category = await context.ActivityCategories.SingleAsync(category => category.Name == "Entwicklung");
+        var project = await AddProjectAsync(context, customer, "Relaunch", defaultHourlyRate: 125m);
+        var expected = await AddStoppedEntryAsync(
+            context,
+            customer,
+            project: project,
+            activityCategory: category,
+            description: "Billable approved work",
+            startedAt: new DateTime(2026, 5, 7, 9, 0, 0, DateTimeKind.Utc),
+            stoppedAt: new DateTime(2026, 5, 7, 11, 0, 0, DateTimeKind.Utc),
+            reviewStatus: TimeEntryReviewStatus.Approved,
+            isBillable: true);
+        await AddStoppedEntryAsync(context, customer, project: project, reviewStatus: TimeEntryReviewStatus.Draft, isBillable: true);
+        await AddStoppedEntryAsync(context, customer, reviewStatus: TimeEntryReviewStatus.Approved, isBillable: false);
+        var service = CreateService();
+
+        var rows = await service.GetReportAsync(new ReportFilter(
+            FromDate: new DateOnly(2026, 5, 7),
+            ToDate: new DateOnly(2026, 5, 7),
+            ProjectId: project.Id,
+            ReviewStatus: TimeEntryReviewStatus.Approved,
+            IsBillable: true));
+
+        var row = Assert.Single(rows);
+        Assert.Equal(expected.Id, row.WorkEntryId);
+        Assert.Equal("Relaunch", row.ProjectName);
+        Assert.Equal("Entwicklung", row.ActivityCategoryName);
+        Assert.Equal(TimeEntryReviewStatus.Approved, row.ReviewStatus);
+        Assert.True(row.IsBillable);
+        Assert.Equal(125m, row.HourlyRate);
+        Assert.Equal(250m, row.BillableAmount);
     }
 
     public async Task InitializeAsync()
@@ -132,11 +170,12 @@ public sealed class ReportServiceTests : IAsyncLifetime
         return new ReportService(_factory);
     }
 
-    private static async Task<Customer> AddCustomerAsync(AppDbContext context, string name)
+    private static async Task<Customer> AddCustomerAsync(AppDbContext context, string name, decimal? defaultHourlyRate = null)
     {
         var customer = new Customer
         {
-            Name = name
+            Name = name,
+            DefaultHourlyRate = defaultHourlyRate
         };
         context.Customers.Add(customer);
         await context.SaveChangesAsync();
@@ -162,15 +201,37 @@ public sealed class ReportServiceTests : IAsyncLifetime
         return target;
     }
 
+    private static async Task<Project> AddProjectAsync(
+        AppDbContext context,
+        Customer customer,
+        string name,
+        decimal? defaultHourlyRate = null)
+    {
+        var project = new Project
+        {
+            CustomerId = customer.Id,
+            Name = name,
+            DefaultHourlyRate = defaultHourlyRate,
+            Status = ProjectStatus.Active
+        };
+        context.Projects.Add(project);
+        await context.SaveChangesAsync();
+        return project;
+    }
+
     private static Task<WorkEntry> AddStoppedEntryAsync(
         AppDbContext context,
         Customer customer,
         BookingTarget? bookingTarget = null,
+        Project? project = null,
+        ActivityCategory? activityCategory = null,
         string? externalTicketId = null,
         string? description = null,
         DateTime? startedAt = null,
         DateTime? stoppedAt = null,
-        int totalPausedSeconds = 0)
+        int totalPausedSeconds = 0,
+        TimeEntryReviewStatus reviewStatus = TimeEntryReviewStatus.Draft,
+        bool isBillable = true)
     {
         var start = startedAt ?? new DateTime(2026, 5, 7, 9, 0, 0, DateTimeKind.Utc);
         return AddEntryAsync(
@@ -178,11 +239,15 @@ public sealed class ReportServiceTests : IAsyncLifetime
             customer,
             WorkEntryStatus.Stopped,
             bookingTarget,
+            project,
+            activityCategory,
             externalTicketId,
             description,
             start,
             stoppedAt ?? start.AddHours(1),
-            totalPausedSeconds);
+            totalPausedSeconds,
+            reviewStatus,
+            isBillable);
     }
 
     private static Task<WorkEntry> AddRunningEntryAsync(
@@ -196,11 +261,15 @@ public sealed class ReportServiceTests : IAsyncLifetime
             customer,
             WorkEntryStatus.Running,
             bookingTarget: null,
+            project: null,
+            activityCategory: null,
             externalTicketId,
             description: null,
             startedAt,
             stoppedAt: null,
-            totalPausedSeconds: 0);
+            totalPausedSeconds: 0,
+            reviewStatus: TimeEntryReviewStatus.Draft,
+            isBillable: true);
     }
 
     private static async Task<WorkEntry> AddEntryAsync(
@@ -208,18 +277,26 @@ public sealed class ReportServiceTests : IAsyncLifetime
         Customer customer,
         WorkEntryStatus status,
         BookingTarget? bookingTarget,
+        Project? project,
+        ActivityCategory? activityCategory,
         string? externalTicketId,
         string? description,
         DateTime startedAt,
         DateTime? stoppedAt,
-        int totalPausedSeconds)
+        int totalPausedSeconds,
+        TimeEntryReviewStatus reviewStatus,
+        bool isBillable)
     {
         var entry = new WorkEntry
         {
             CustomerId = customer.Id,
             BookingTargetId = bookingTarget?.Id,
+            ProjectId = project?.Id,
+            ActivityCategoryId = activityCategory?.Id,
             ExternalTicketId = externalTicketId,
             Description = description,
+            IsBillable = isBillable,
+            ReviewStatus = reviewStatus,
             StartedAt = startedAt,
             StoppedAt = stoppedAt,
             TotalPausedSeconds = totalPausedSeconds,

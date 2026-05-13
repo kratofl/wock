@@ -6,11 +6,13 @@ using Serilog.Formatting.Compact;
 using Wock.Common.Logging;
 using Wock.Common.Security;
 using Wock.Components;
+using Wock.Components.Theme;
 using Wock.Data;
 using Wock.Features.BookingTargets;
 using Wock.Features.Customers;
 using Wock.Features.Plugins;
 using Wock.Features.Reports;
+using Wock.Features.Settings;
 using Wock.Features.TimeTracking;
 using Wock.Infrastructure;
 
@@ -47,6 +49,7 @@ builder.Services.AddMudServices(config =>
 });
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ThemePreferenceService>();
 builder.Services.AddScoped<ICurrentUserContext, CurrentUserContext>();
 builder.Services.AddWockInfrastructure(builder.Configuration, options =>
 {
@@ -54,7 +57,9 @@ builder.Services.AddWockInfrastructure(builder.Configuration, options =>
         ?? Path.Combine(builder.Environment.ContentRootPath, "plugins");
 });
 builder.Services.AddScoped<CustomerService>();
+builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<BookingTargetService>();
+builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<PluginRegistryService>();
 builder.Services.AddScoped<TimeTrackingService>();
 builder.Services.AddScoped<ReportService>();

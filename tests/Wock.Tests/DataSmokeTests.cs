@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Wock.Common.Security;
@@ -42,6 +43,104 @@ public class DataSmokeTests
         var bookingTarget = Assert.Single(savedCustomer.BookingTargets);
         Assert.Equal(customer.Id, bookingTarget.CustomerId);
         Assert.Equal("ALPHA-123", bookingTarget.BookingTicketId);
+    }
+
+    [Fact]
+    public async Task Can_insert_project_task_category_and_billable_work_entry()
+    {
+        await using var context = CreateContext();
+        await context.Database.EnsureCreatedAsync();
+
+        var customer = new Customer
+        {
+            Name = "Example Customer",
+            DefaultHourlyRate = 125m
+        };
+        var category = await context.ActivityCategories.SingleAsync(category => category.Name == "Entwicklung");
+        var project = new Project
+        {
+            Customer = customer,
+            Name = "Relaunch",
+            BillingModel = BillingModel.Hourly,
+            DefaultHourlyRate = 125m
+        };
+        var task = new ProjectTask
+        {
+            Project = project,
+            Title = "Frontend",
+            ActivityCategory = category
+        };
+        var entry = new WorkEntry
+        {
+            Customer = customer,
+            Project = project,
+            ProjectTask = task,
+            ActivityCategory = category,
+            Description = "Build capture form",
+            IsBillable = true,
+            HourlyRate = 125m,
+            StartedAt = DateTime.UtcNow,
+            StoppedAt = DateTime.UtcNow.AddHours(1),
+            Status = WorkEntryStatus.Stopped
+        };
+
+        context.WorkEntries.Add(entry);
+        await context.SaveChangesAsync();
+
+        var savedEntry = await context.WorkEntries
+            .Include(workEntry => workEntry.Project)
+            .Include(workEntry => workEntry.ProjectTask)
+            .Include(workEntry => workEntry.ActivityCategory)
+            .SingleAsync();
+
+        Assert.Equal("Relaunch", savedEntry.Project!.Name);
+        Assert.Equal("Frontend", savedEntry.ProjectTask!.Title);
+        Assert.Equal("Entwicklung", savedEntry.ActivityCategory!.Name);
+        Assert.Equal(TimeEntryReviewStatus.Draft, savedEntry.ReviewStatus);
+        Assert.True(savedEntry.IsBillable);
+    }
+
+    [Fact]
+    public async Task Active_work_entry_constraint_is_scoped_to_owner_user()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var setupContext = CreateContext(connection);
+        await setupContext.Database.EnsureCreatedAsync();
+        setupContext.Users.AddRange(
+            new ApplicationUser { Id = "user-1", UserName = "user.one" },
+            new ApplicationUser { Id = "user-2", UserName = "user.two" });
+        setupContext.Customers.Add(new Customer { Name = "Example Customer" });
+        await setupContext.SaveChangesAsync();
+        var customerId = await setupContext.Customers.Select(customer => customer.Id).SingleAsync();
+
+        await using var userOneContext = CreateContext(connection, new MutableCurrentUserContext("user-1", "User One"));
+        await userOneContext.Database.EnsureCreatedAsync();
+        userOneContext.WorkEntries.Add(new WorkEntry
+        {
+            CustomerId = customerId,
+            StartedAt = DateTime.UtcNow,
+            Status = WorkEntryStatus.Running
+        });
+        await userOneContext.SaveChangesAsync();
+
+        userOneContext.WorkEntries.Add(new WorkEntry
+        {
+            CustomerId = customerId,
+            StartedAt = DateTime.UtcNow,
+            Status = WorkEntryStatus.Running
+        });
+        await Assert.ThrowsAsync<DbUpdateException>(() => userOneContext.SaveChangesAsync());
+
+        await using var userTwoContext = CreateContext(connection, new MutableCurrentUserContext("user-2", "User Two"));
+        await userTwoContext.Database.EnsureCreatedAsync();
+        userTwoContext.WorkEntries.Add(new WorkEntry
+        {
+            CustomerId = customerId,
+            StartedAt = DateTime.UtcNow,
+            Status = WorkEntryStatus.Running
+        });
+        await userTwoContext.SaveChangesAsync();
     }
 
     [Fact]
@@ -256,6 +355,21 @@ public class DataSmokeTests
             clock ?? new SystemClock());
         context.Database.OpenConnection();
         return context;
+    }
+
+    private static AppDbContext CreateContext(
+        SqliteConnection connection,
+        ICurrentUserContext? currentUserContext = null,
+        ISystemClock? clock = null)
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        return new AppDbContext(
+            options,
+            currentUserContext ?? AnonymousCurrentUserContext.Instance,
+            clock ?? new SystemClock());
     }
 
     private static IConfiguration BuildConfiguration(string provider, string? connectionString = null)

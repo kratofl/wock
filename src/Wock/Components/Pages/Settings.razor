@@ -1,0 +1,250 @@
+@page "/settings"
+@using Wock.Features.Settings
+@using Wock.Models
+@implements IDisposable
+@inject ThemePreferenceService ThemePreferences
+@inject CategoryService CategoryService
+
+<MudStack Spacing="3" Class="wock-page-stack">
+    <MudText Typo="Typo.h3">Settings</MudText>
+    <StatusMessage Message="@_message" Kind="@_messageSeverity" />
+
+    <MudPaper Elevation="0" Class="wock-section">
+        <MudStack Spacing="3">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h5">Branding</MudText>
+                <MudText Typo="Typo.body2" Class="wock-muted">Wock keeps the orange product accent across navigation, actions, and charts.</MudText>
+            </MudStack>
+            <div class="wock-brand-preview">
+                <span class="wock-brand-mark" aria-hidden="true"></span>
+                <div>
+                    <MudText Typo="Typo.h6">Wock</MudText>
+                    <MudText Typo="Typo.body2" Class="wock-muted">Primary accent #ff906c</MudText>
+                </div>
+            </div>
+        </MudStack>
+    </MudPaper>
+
+    <MudPaper Elevation="0" Class="wock-section">
+        <MudStack Spacing="3">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h5">Appearance</MudText>
+                <MudText Typo="Typo.body2" Class="wock-muted">Choose the dashboard theme. The setting is saved locally for this browser.</MudText>
+            </MudStack>
+
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6">
+                    <MudButton Variant="@GetThemeVariant(false)" Color="@GetThemeColor(false)" FullWidth="true" Class="wock-theme-choice" OnClick="() => SetThemeAsync(false)">
+                        <span class="wock-theme-choice-content">
+                            <span class="wock-theme-choice-icon"><i class="fa-regular fa-sun wock-icon" aria-hidden="true"></i></span>
+                            <span>
+                                <span class="wock-theme-choice-title">Light mode</span>
+                                <span class="wock-theme-choice-meta">Warm fintech canvas</span>
+                            </span>
+                        </span>
+                    </MudButton>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudButton Variant="@GetThemeVariant(true)" Color="@GetThemeColor(true)" FullWidth="true" Class="wock-theme-choice" OnClick="() => SetThemeAsync(true)">
+                        <span class="wock-theme-choice-content">
+                            <span class="wock-theme-choice-icon"><i class="fa-regular fa-moon wock-icon" aria-hidden="true"></i></span>
+                            <span>
+                                <span class="wock-theme-choice-title">Dark mode</span>
+                                <span class="wock-theme-choice-meta">Low-light dashboard</span>
+                            </span>
+                        </span>
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudStack>
+    </MudPaper>
+
+    <MudPaper Elevation="0" Class="wock-section">
+        <MudStack Spacing="3">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h5">Activity categories</MudText>
+                <MudText Typo="Typo.body2" Class="wock-muted">Categories are used for time entries, project tasks, reports, and later billing rules.</MudText>
+            </MudStack>
+
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="7">
+                    <MudTextField T="string" Label="Category name" @bind-Value="_newCategory.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudNumericField T="int" Label="Sort order" @bind-Value="_newCategory.SortOrder" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateCategoryAsync">Add</MudButton>
+                </MudItem>
+            </MudGrid>
+
+            @if (_categories.Count == 0)
+            {
+                <MudText>No categories configured.</MudText>
+            }
+            else
+            {
+                <MudTable Items="_categories" Hover="true" Dense="true">
+                    <HeaderContent>
+                        <MudTh>Name</MudTh>
+                        <MudTh>Sort</MudTh>
+                        <MudTh>Active</MudTh>
+                        <MudTh></MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="category">
+                        @{
+                            var model = _categoryEditModels[category.Id];
+                        }
+                        <MudTd DataLabel="Name">
+                            <MudTextField T="string" @bind-Value="model.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                        </MudTd>
+                        <MudTd DataLabel="Sort">
+                            <MudNumericField T="int" @bind-Value="model.SortOrder" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                        </MudTd>
+                        <MudTd DataLabel="Active">
+                            <MudSwitch T="bool" @bind-Value="model.IsActive" Color="Color.Primary" />
+                        </MudTd>
+                        <MudTd>
+                            <div class="wock-button-row">
+                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="() => UpdateCategoryAsync(category.Id)">Save</MudButton>
+                                <MudButton Variant="Variant.Text" Color="@(category.IsActive ? Color.Error : Color.Success)" Size="Size.Small" OnClick="() => ToggleCategoryAsync(category.Id, !category.IsActive)">
+                                    @(category.IsActive ? "Deactivate" : "Reactivate")
+                                </MudButton>
+                            </div>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudStack>
+    </MudPaper>
+</MudStack>
+
+@code {
+    private bool _isDarkMode;
+    private readonly CategoryFormModel _newCategory = new();
+    private readonly Dictionary<int, CategoryFormModel> _categoryEditModels = [];
+    private IReadOnlyList<ActivityCategory> _categories = [];
+    private string? _message;
+    private Severity _messageSeverity = Severity.Info;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isDarkMode = ThemePreferences.IsDarkMode;
+        ThemePreferences.Changed += ThemePreferenceChanged;
+        await RefreshCategoriesAsync();
+    }
+
+    private async Task SetThemeAsync(bool isDarkMode)
+    {
+        await ThemePreferences.SetDarkModeAsync(isDarkMode);
+    }
+
+    private Variant GetThemeVariant(bool isDarkMode)
+    {
+        return _isDarkMode == isDarkMode ? Variant.Filled : Variant.Outlined;
+    }
+
+    private Color GetThemeColor(bool isDarkMode)
+    {
+        return _isDarkMode == isDarkMode ? Color.Primary : Color.Default;
+    }
+
+    private void ThemePreferenceChanged()
+    {
+        _isDarkMode = ThemePreferences.IsDarkMode;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CreateCategoryAsync()
+    {
+        try
+        {
+            await CategoryService.CreateAsync(_newCategory.Name, _newCategory.SortOrder);
+            _newCategory.Name = string.Empty;
+            _newCategory.SortOrder = NextSortOrder();
+            _message = "Category created.";
+            _messageSeverity = Severity.Success;
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+            _messageSeverity = Severity.Error;
+        }
+
+        await RefreshCategoriesAsync();
+    }
+
+    private async Task UpdateCategoryAsync(int categoryId)
+    {
+        try
+        {
+            var model = _categoryEditModels[categoryId];
+            await CategoryService.UpdateAsync(categoryId, model.Name, model.SortOrder, model.IsActive);
+            _message = "Category updated.";
+            _messageSeverity = Severity.Success;
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+            _messageSeverity = Severity.Error;
+        }
+
+        await RefreshCategoriesAsync();
+    }
+
+    private async Task ToggleCategoryAsync(int categoryId, bool isActive)
+    {
+        try
+        {
+            await CategoryService.SetActiveAsync(categoryId, isActive);
+            _message = isActive ? "Category reactivated." : "Category deactivated.";
+            _messageSeverity = Severity.Success;
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+            _messageSeverity = Severity.Error;
+        }
+
+        await RefreshCategoriesAsync();
+    }
+
+    private async Task RefreshCategoriesAsync()
+    {
+        _categories = await CategoryService.ListAllAsync();
+        _categoryEditModels.Clear();
+        foreach (var category in _categories)
+        {
+            _categoryEditModels[category.Id] = new CategoryFormModel
+            {
+                Name = category.Name,
+                SortOrder = category.SortOrder,
+                IsActive = category.IsActive
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(_newCategory.Name))
+        {
+            _newCategory.SortOrder = NextSortOrder();
+        }
+    }
+
+    private int NextSortOrder()
+    {
+        return _categories.Count == 0 ? 10 : _categories.Max(category => category.SortOrder) + 10;
+    }
+
+    public void Dispose()
+    {
+        ThemePreferences.Changed -= ThemePreferenceChanged;
+    }
+
+    private sealed class CategoryFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public int SortOrder { get; set; } = 10;
+
+        public bool IsActive { get; set; } = true;
+    }
+}

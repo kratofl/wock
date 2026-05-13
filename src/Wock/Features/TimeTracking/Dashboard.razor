@@ -11,75 +11,90 @@
 @inject IDbContextFactory<AppDbContext> DbContextFactory
 @inject ISystemClock Clock
 
-<MudStack Spacing="3" Class="wock-page-stack">
-    <MudStack Spacing="1">
-        <MudText Typo="Typo.overline" Class="wock-page-kicker">Tracking home</MudText>
-        <MudText Typo="Typo.h3" Class="wock-page-title">Tasks & Time Tracking</MudText>
-        <MudText Typo="Typo.body1" Class="wock-muted">Start, resume, or switch tasks with one deliberate click.</MudText>
-    </MudStack>
+<MudStack Spacing="3" Class="wock-page-stack wock-dashboard-page">
+    <MudPaper Elevation="0" Class="wock-dashboard-hero">
+        <MudStack Spacing="1">
+            <MudText Typo="Typo.overline" Class="wock-page-kicker">Arbeitszeit</MudText>
+            <MudText Typo="Typo.h3" Class="wock-page-title">Zeit fuer Kunden erfassen</MudText>
+            <MudText Typo="Typo.body1" Class="wock-muted">Kunde auswaehlen, optional Projekt und Taetigkeit ergaenzen, starten.</MudText>
+        </MudStack>
+    </MudPaper>
 
     <StatusMessage Message="@_message" Kind="@_messageSeverity" />
 
-    <MudGrid Spacing="2" Class="wock-dashboard-panels">
-        <MudItem xs="12" lg="4" Class="wock-dashboard-panel">
-            <MudStack Spacing="2">
+    <MudGrid Spacing="3" Class="wock-dashboard-panels">
+        <MudItem xs="12" lg="7" Class="wock-dashboard-panel">
+            @if (_activeEntry is null)
+            {
+                <MudPaper Elevation="0" Outlined="true" Class="wock-section wock-custom-start-panel">
+                    <MudStack Spacing="2">
+                        <div class="wock-section-heading">
+                            <div>
+                                <MudText Typo="Typo.h5">Zeit starten</MudText>
+                                <MudText Typo="Typo.body2" Class="wock-muted">Customer first: Projekt, Aufgabe, Kategorie und Ticket koennen ergaenzt werden.</MudText>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">Draft</MudChip>
+                        </div>
+                        <WorkEntryForm Customers="_customers"
+                                       BookingTargets="_bookingTargets"
+                                       Projects="_projects"
+                                       ProjectTasks="_projectTasks"
+                                       ActivityCategories="_activityCategories"
+                                       Disabled="_isBusy"
+                                       OnStart="StartAsync" />
+                    </MudStack>
+                </MudPaper>
+            }
+            else
+            {
                 <ActiveTimerCard Entry="_activeEntry" NetDuration="_netDuration" Disabled="_isBusy" OnPause="PauseAsync" OnResume="ResumeAsync" OnStop="StopAsync" />
-                <MudPaper Elevation="0" Outlined="true" Class="wock-metric-card">
-                    <MudStack Spacing="1">
-                        <div class="wock-metric-heading">
-                            <i class="fa-solid fa-calendar-day wock-icon" aria-hidden="true"></i>
-                            <MudText Typo="Typo.overline" Class="wock-metric-label">Today tracked</MudText>
-                        </div>
-                        <MudText Typo="Typo.h5" Class="wock-metric-value">@FormatDuration(_todayDuration)</MudText>
-                        <MudText Typo="Typo.body2" Class="wock-muted">@_todayEntryCount entries today</MudText>
-                    </MudStack>
-                </MudPaper>
-                <MudPaper Elevation="0" Outlined="true" Class="wock-metric-card wock-graph-card">
-                    <MudStack Spacing="1">
-                        <div class="wock-metric-heading">
-                            <i class="fa-solid fa-chart-simple wock-icon" aria-hidden="true"></i>
-                            <MudText Typo="Typo.overline" Class="wock-metric-label">Week trend</MudText>
-                        </div>
-                        <MudText Typo="Typo.caption" Class="wock-muted">Minutes per day</MudText>
-                        <div class="wock-week-chart" aria-label="Tracked time Monday to Sunday">
-                            <MudChart T="double"
-                                      ChartType="ChartType.Bar"
-                                      ChartSeries="_weekChartSeries"
-                                      ChartLabels="_weekChartLabels"
-                                      ChartOptions="_weekChartOptions"
-                                      Width="100%"
-                                      Height="170px" />
-                        </div>
-                        <MudText Typo="Typo.caption" Class="wock-muted">Monday - Sunday</MudText>
-                        <MudText Typo="Typo.body2" Class="wock-muted">@FormatDuration(_weekDuration) this week</MudText>
-                    </MudStack>
-                </MudPaper>
-            </MudStack>
+            }
         </MudItem>
 
-        <MudItem xs="12" lg="8" Class="wock-dashboard-panel">
-            <MudPaper Elevation="0" Outlined="true" Class="wock-section wock-quick-switch">
+        <MudItem xs="12" lg="5" Class="wock-dashboard-panel">
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6">
+                    <MudPaper Elevation="0" Outlined="true" Class="wock-metric-card">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.overline" Class="wock-metric-label">Today tracked</MudText>
+                            <MudText Typo="Typo.h5" Class="wock-metric-value">@FormatDuration(_todayDuration)</MudText>
+                            <MudText Typo="Typo.body2" Class="wock-muted">@_todayEntryCount entries today</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudPaper Elevation="0" Outlined="true" Class="wock-metric-card">
+                        <MudStack Spacing="1">
+                            <MudText Typo="Typo.overline" Class="wock-metric-label">This week</MudText>
+                            <MudText Typo="Typo.h5" Class="wock-metric-value">@FormatDuration(_weekDuration)</MudText>
+                            <MudText Typo="Typo.body2" Class="wock-muted">@_quickTasks.Count presets ready</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <MudPaper Elevation="0" Outlined="true" Class="wock-section wock-quick-switch mt-3">
                 <MudStack Spacing="2">
                     <div class="wock-section-heading">
                         <div>
-                            <MudText Typo="Typo.h5">Tasks</MudText>
-                            <MudText Typo="Typo.body2" Class="wock-muted">Most recent tasks are first. Click a task to start or switch tracking.</MudText>
+                            <MudText Typo="Typo.h5">Zuletzt genutzt</MudText>
+                            <MudText Typo="Typo.body2" Class="wock-muted">Ein Klick startet oder wechselt zu einer bekannten Kundenarbeit.</MudText>
                         </div>
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_quickTasks.Count ready</MudChip>
                     </div>
 
                     @if (_quickTasks.Count > 4)
                     {
-                        <MudTextField T="string" Label="Search tasks" @bind-Value="_taskSearch" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+                        <MudTextField T="string" Label="Search customer or preset" @bind-Value="_taskSearch" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
                     }
 
                     @if (_quickTasks.Count == 0)
                     {
                         <MudPaper Elevation="0" Outlined="true" Class="wock-empty-state">
                             <MudStack Spacing="1">
-                                <MudText Typo="Typo.h6">No tasks ready yet</MudText>
-                                <MudText Typo="Typo.body2" Class="wock-muted">Create a customer and task once, then use this page for fast switching.</MudText>
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="booking-targets">Create tasks</MudButton>
+                                <MudText Typo="Typo.h6">No presets ready yet</MudText>
+                                <MudText Typo="Typo.body2" Class="wock-muted">Start once for a customer or create customer work in master data, then it appears here.</MudText>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="booking-targets">Create presets</MudButton>
                             </MudStack>
                         </MudPaper>
                     }
@@ -121,15 +136,42 @@
         </MudItem>
     </MudGrid>
 
-    <MudPaper Elevation="0" Outlined="true" Class="wock-section wock-custom-start-panel">
-        <MudExpansionPanels Elevation="0" Class="wock-custom-start">
-            <MudExpansionPanel Text="Custom start with details" Disabled="@(_activeEntry is not null || _isBusy)">
-                <MudStack Spacing="2">
-                    <MudText Typo="Typo.body2" Class="wock-muted">Use this when you need a one-off customer, ticket, or description before starting.</MudText>
-                    <WorkEntryForm Customers="_customers" BookingTargets="_bookingTargets" Disabled="@(_activeEntry is not null || _isBusy)" OnStart="StartAsync" />
-                </MudStack>
-            </MudExpansionPanel>
-        </MudExpansionPanels>
+    <MudPaper Elevation="0" Outlined="true" Class="wock-section">
+        <MudStack Spacing="2">
+            <div class="wock-section-heading">
+                <div>
+                    <MudText Typo="Typo.h5">Heute</MudText>
+                    <MudText Typo="Typo.body2" Class="wock-muted">Laufende und gestoppte Eintraege mit Status und Nettozeit.</MudText>
+                </div>
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@FormatDuration(_todayDuration)</MudChip>
+            </div>
+            <MudTable Items="_todayEntries" Dense="true" Hover="true">
+                <HeaderContent>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Customer</MudTh>
+                    <MudTh>Work</MudTh>
+                    <MudTh>Time</MudTh>
+                    <MudTh>Net</MudTh>
+                    <MudTh>Billing</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Status">
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@context.Status</MudChip>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@context.ReviewStatus</MudChip>
+                        </MudStack>
+                    </MudTd>
+                    <MudTd DataLabel="Customer">@context.Customer?.Name</MudTd>
+                    <MudTd DataLabel="Work">@FormatEntryWork(context)</MudTd>
+                    <MudTd DataLabel="Time">@FormatEntryTime(context)</MudTd>
+                    <MudTd DataLabel="Net">@FormatDuration(TimeTracking.GetNetDuration(context, Clock.UtcNow))</MudTd>
+                    <MudTd DataLabel="Billing">@(context.IsBillable ? "Billable" : "Non-billable")</MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>No work entries tracked today.</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        </MudStack>
     </MudPaper>
 </MudStack>
 
@@ -138,6 +180,9 @@
 
     private IReadOnlyList<Customer> _customers = [];
     private IReadOnlyList<BookingTarget> _bookingTargets = [];
+    private IReadOnlyList<Project> _projects = [];
+    private IReadOnlyList<ProjectTask> _projectTasks = [];
+    private IReadOnlyList<ActivityCategory> _activityCategories = [];
     private IReadOnlyList<QuickTaskItem> _quickTasks = [];
     private IReadOnlyList<WorkEntry> _weekEntries = [];
     private IReadOnlyList<WorkEntry> _todayEntries = [];
@@ -160,7 +205,7 @@
     private Task? _liveRefreshTask;
     private readonly BarChartOptions _weekChartOptions = new()
     {
-        ChartPalette = [WockTheme.Brand],
+        ChartPalette = [WockTheme.ChartAccent],
         ShowLegend = false,
         TooltipTitleFormat = "{{X_VALUE}}",
         YAxisTicks = 15,
@@ -217,7 +262,11 @@
             request.CustomerId,
             request.BookingTargetId,
             request.ExternalTicketId,
-            request.Description));
+            request.Description,
+            request.ProjectId,
+            request.ProjectTaskId,
+            request.ActivityCategoryId,
+            request.IsBillable));
     }
 
     private async Task ActivateTaskAsync(int bookingTargetId)
@@ -284,6 +333,26 @@
             .OrderBy(target => target.Customer.Name)
             .ThenBy(target => target.Name)
             .ToListAsync();
+        _projects = await context.Projects
+            .AsNoTracking()
+            .Include(project => project.Customer)
+            .Where(project => project.Status != ProjectStatus.Archived && project.Customer.IsActive)
+            .OrderBy(project => project.Customer.Name)
+            .ThenBy(project => project.Name)
+            .ToListAsync();
+        _projectTasks = await context.ProjectTasks
+            .AsNoTracking()
+            .Include(task => task.Project)
+            .Where(task => task.Status != ProjectTaskStatus.Archived && task.Project.Status != ProjectStatus.Archived)
+            .OrderBy(task => task.Project.Name)
+            .ThenBy(task => task.Title)
+            .ToListAsync();
+        _activityCategories = await context.ActivityCategories
+            .AsNoTracking()
+            .Where(category => category.IsActive)
+            .OrderBy(category => category.SortOrder)
+            .ThenBy(category => category.Name)
+            .ToListAsync();
 
         _activeEntry = await TimeTracking.GetActiveEntryAsync();
         _netDuration = _activeEntry is null ? TimeSpan.Zero : TimeTracking.GetNetDuration(_activeEntry);
@@ -299,6 +368,11 @@
         var weekEnd = _weekStart.AddDays(7);
         _weekEntries = await context.WorkEntries
             .AsNoTracking()
+            .Include(entry => entry.Customer)
+            .Include(entry => entry.BookingTarget)
+            .Include(entry => entry.Project)
+            .Include(entry => entry.ProjectTask)
+            .Include(entry => entry.ActivityCategory)
             .Include(entry => entry.Pauses)
             .Where(entry => entry.StartedAt >= _weekStart && entry.StartedAt < weekEnd)
             .OrderByDescending(entry => entry.StartedAt)
@@ -431,6 +505,22 @@
     private static string FormatTaskMeta(QuickTaskItem task)
     {
         return $"{task.CustomerName} - {task.BookingSoftware} {task.BookingTicketId}";
+    }
+
+    private static string FormatEntryWork(WorkEntry entry)
+    {
+        return entry.ProjectTask?.Title
+            ?? entry.BookingTarget?.Name
+            ?? entry.Project?.Name
+            ?? entry.ActivityCategory?.Name
+            ?? entry.Description
+            ?? "Custom tracking";
+    }
+
+    private static string FormatEntryTime(WorkEntry entry)
+    {
+        var stop = entry.StoppedAt?.ToString("HH:mm") ?? "now";
+        return $"{entry.StartedAt:HH:mm} - {stop}";
     }
 
     private string GetTaskActionLabel(QuickTaskItem task)

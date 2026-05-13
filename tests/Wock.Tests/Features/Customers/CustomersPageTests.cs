@@ -19,8 +19,8 @@ public sealed class CustomersPageTests
 
         page.WaitForAssertion(() =>
         {
-            Assert.Contains("Customers", page.Markup);
-            Assert.Contains("Create customer", page.Markup);
+            Assert.Contains("Projekte", page.Markup);
+            Assert.Contains("Kunde anlegen", page.Markup);
             Assert.Contains("No active customers", page.Markup);
         });
     }
@@ -54,11 +54,13 @@ public sealed class CustomersPageTests
             }
 
             var customerService = new CustomerService(factory);
+            var projectService = new ProjectService(factory);
             var testContext = new BunitContext();
             testContext.JSInterop.Mode = JSRuntimeMode.Loose;
             testContext.Services.AddMudServices(config => config.PopoverOptions.CheckForPopoverProvider = false);
             testContext.Services.AddSingleton<IDbContextFactory<AppDbContext>>(factory);
             testContext.Services.AddSingleton(customerService);
+            testContext.Services.AddSingleton(projectService);
 
             return new PageTestFixture(testContext, connection, customerService);
         }

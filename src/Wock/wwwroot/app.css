@@ -5,60 +5,156 @@ html, body {
 }
 
 :root {
+    /* Atomic palette tokens: raw colors only. */
+    --wock-color-primary: #ff906c;
+    --wock-color-primary-dark: #e26f4f;
+    --wock-color-primary-soft: #fff1ec;
+    --wock-color-primary-glass: rgba(255, 144, 108, 0.2);
+    --wock-color-primary-glass-hover: rgba(255, 144, 108, 0.3);
+    --wock-color-primary-border: rgba(255, 144, 108, 0.58);
+    --wock-color-primary-foreground: #ffffff;
+    --wock-color-primary-readable: #4b1d10;
+    --wock-color-support: #9d8fb0;
+    --wock-color-ink: #21172f;
+    --wock-color-ink-muted: #70657d;
+    --wock-color-sidebar: rgba(255, 254, 253, 0.94);
+    --wock-color-sidebar-strong: #f8f2fc;
+    --wock-color-sidebar-foreground: #21172f;
+    --wock-color-sidebar-muted: #70657d;
+    --wock-color-canvas: #f7f3ff;
+    --wock-color-canvas-warm: #fff5ec;
+    --wock-color-surface-glass: rgba(255, 254, 253, 0.92);
+    --wock-color-surface-glass-strong: #fffefd;
+    --wock-color-surface-muted: #f5eef9;
+    --wock-color-surface-control: #f8f2fc;
+    --wock-color-surface-control-strong: #fffefd;
+    --wock-color-border-glass: #efe3f6;
+    --wock-color-border-subtle: #eadff4;
+    --wock-color-input-border: #ddd0ec;
+
+    /* Semantic tokens: map palette atoms to product intent. */
     --wock-background: var(--mud-palette-background);
+    --wock-background-image:
+        radial-gradient(circle at 18% 0%, rgba(236, 205, 255, 0.72), transparent 25rem),
+        radial-gradient(circle at 94% 16%, rgba(255, 144, 108, 0.18), transparent 22rem),
+        radial-gradient(circle at 48% 102%, rgba(157, 143, 176, 0.18), transparent 30rem),
+        linear-gradient(135deg, var(--wock-color-canvas) 0%, #fbf7ff 56%, var(--wock-color-canvas-warm) 100%);
     --wock-foreground: var(--mud-palette-text-primary);
-    --wock-card: var(--mud-palette-surface);
+    --wock-card: var(--wock-color-surface-glass);
     --wock-card-foreground: var(--mud-palette-text-primary);
-    --wock-popover: var(--mud-palette-surface);
+    --wock-popover: var(--wock-color-surface-glass-strong);
     --wock-popover-foreground: var(--mud-palette-text-primary);
-    --wock-brand: var(--mud-palette-primary);
-    --wock-brand-hover: var(--mud-palette-primary-darken);
-    --wock-brand-soft: var(--mud-palette-primary-lighten);
-    --wock-secondary: var(--mud-palette-secondary);
-    --wock-secondary-foreground: var(--mud-palette-secondary-text);
-    --wock-primary: var(--mud-palette-primary);
-    --wock-primary-foreground: var(--mud-palette-primary-text);
-    --wock-muted: var(--mud-palette-background-gray);
+    --wock-brand: var(--wock-color-primary);
+    --wock-muted: var(--wock-color-surface-muted);
     --wock-muted-foreground: var(--mud-palette-text-secondary);
-    --wock-accent: var(--mud-palette-background-gray);
+    --wock-accent: rgba(255, 255, 255, 0.48);
     --wock-accent-foreground: var(--mud-palette-text-primary);
-    --wock-border: var(--mud-palette-lines-default);
-    --wock-input: var(--mud-palette-lines-inputs);
-    --wock-ring: var(--mud-palette-primary);
+    --wock-border: var(--wock-color-border-subtle);
+    --wock-input: var(--wock-color-input-border);
+    --wock-semantic-action-surface: var(--wock-color-primary-glass);
+    --wock-semantic-action-surface-hover: var(--wock-color-primary-glass-hover);
+    --wock-semantic-action-border: var(--wock-color-primary-border);
+    --wock-semantic-action-foreground: var(--wock-color-primary-readable);
+    --wock-semantic-chart-accent: var(--wock-color-primary);
+    --wock-semantic-focus: var(--wock-color-primary);
+    --wock-ring: var(--wock-semantic-focus);
     --wock-destructive: var(--mud-palette-error);
-    --wock-container-shadow: none;
-    --wock-container-shadow-sm: none;
-    --wock-radius: 0.625rem;
-    --wock-radius-sm: 0.5rem;
-    --wock-radius-lg: 0.875rem;
-    --wock-control-height: 2rem;
-    --wock-control-height-sm: 1.75rem;
-    --wock-input-height: 1.875rem;
-    --wock-input-height-sm: 1.75rem;
+
+    /* Component tokens: components must consume these, not raw atomic colors. */
+    --wock-glass-blur: 8px;
+    --wock-glass-control: var(--wock-color-surface-control);
+    --wock-glass-control-strong: var(--wock-color-surface-control-strong);
+    --wock-glass-border: var(--wock-color-border-glass);
+    --wock-glass-border-strong: #ffffff;
+    --wock-button-action-bg: var(--wock-semantic-action-surface);
+    --wock-button-action-bg-hover: var(--wock-semantic-action-surface-hover);
+    --wock-button-action-border: var(--wock-semantic-action-border);
+    --wock-button-action-fg: var(--wock-semantic-action-foreground);
+    --wock-chart-bar: var(--wock-semantic-chart-accent);
+    --wock-nav-active-border: var(--wock-semantic-action-border);
+    --wock-nav-active-indicator: var(--wock-semantic-chart-accent);
+    --wock-brand-mark-start: var(--wock-color-primary-soft);
+    --wock-brand-mark-end: var(--wock-color-primary);
+    --wock-brand-mark-ring: rgba(255, 144, 108, 0.14);
+    --wock-container-shadow: 0 18px 45px rgba(33, 23, 47, 0.08);
+    --wock-container-shadow-sm: 0 10px 24px rgba(33, 23, 47, 0.06);
+    --wock-radius: 1rem;
+    --wock-radius-sm: 0.75rem;
+    --wock-radius-lg: 1.5rem;
+    --wock-control-height: 2.25rem;
+    --wock-control-height-sm: 1.875rem;
+    --wock-input-height: 2.25rem;
+    --wock-input-height-sm: 2rem;
     --wock-control-font-size: 0.8125rem;
     --wock-focus-outline: 2px solid var(--wock-ring);
 }
 
 body {
     background-color: var(--wock-background) !important;
+    background-image: var(--wock-background-image);
+    background-attachment: fixed;
+    background-size: cover;
     color: var(--wock-foreground);
 }
 
 .wock-layout,
 .wock-layout .mud-main-content,
 .wock-layout .wock-main-content {
-    background-color: var(--wock-background) !important;
+    background-color: transparent !important;
     color: var(--wock-foreground);
 }
 
 .wock-layout {
+    background-color: var(--wock-background) !important;
+    background-image: var(--wock-background-image);
+    background-attachment: fixed;
+    background-size: cover;
     min-height: 100vh;
+    position: relative;
 }
 
 .wock-layout-dark,
 .wock-layout-dark .mud-main-content,
 .wock-layout-dark .wock-main-content {
-    background-color: var(--wock-background) !important;
+    --wock-color-ink: #f8f4ff;
+    --wock-color-ink-muted: #cfc2e0;
+    --wock-color-sidebar: #1a1228;
+    --wock-color-sidebar-strong: #120d1f;
+    --wock-color-sidebar-foreground: #f8f4ff;
+    --wock-color-sidebar-muted: #cfc2e0;
+    --wock-color-surface-glass: rgba(30, 23, 44, 0.9);
+    --wock-color-surface-glass-strong: #241b35;
+    --wock-color-surface-muted: rgba(255, 255, 255, 0.06);
+    --wock-color-surface-control: rgba(255, 255, 255, 0.08);
+    --wock-color-surface-control-strong: rgba(255, 255, 255, 0.12);
+    --wock-color-border-glass: rgba(255, 255, 255, 0.14);
+    --wock-color-border-subtle: rgba(255, 255, 255, 0.14);
+    --wock-color-input-border: rgba(255, 255, 255, 0.18);
+    --wock-color-primary-readable: #fff1ec;
+    --wock-background-image:
+        radial-gradient(circle at 14% 2%, rgba(255, 144, 108, 0.18), transparent 28rem),
+        radial-gradient(circle at 86% 10%, rgba(236, 205, 255, 0.16), transparent 28rem),
+        radial-gradient(circle at 52% 102%, rgba(157, 143, 176, 0.1), transparent 34rem),
+        linear-gradient(135deg, #120d1f 0%, #1a1228 52%, #241725 100%);
+    --wock-card: var(--wock-color-surface-glass);
+    --wock-popover: var(--wock-color-surface-glass-strong);
+    --wock-muted: var(--wock-color-surface-muted);
+    --wock-accent: rgba(255, 255, 255, 0.1);
+    --wock-border: var(--wock-color-border-subtle);
+    --wock-input: var(--wock-color-input-border);
+    --wock-glass-control: var(--wock-color-surface-control);
+    --wock-glass-control-strong: var(--wock-color-surface-control-strong);
+    --wock-glass-border: var(--wock-color-border-glass);
+    --wock-glass-border-strong: rgba(255, 255, 255, 0.22);
+    --wock-button-action-bg: rgba(255, 144, 108, 0.2);
+    --wock-button-action-bg-hover: rgba(255, 144, 108, 0.28);
+    --wock-button-action-border: rgba(255, 144, 108, 0.54);
+    --wock-button-action-fg: #fff1ec;
+    --wock-nav-active-border: rgba(255, 144, 108, 0.54);
+    --wock-brand-mark-ring: rgba(255, 144, 108, 0.18);
+    --wock-container-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+    --wock-container-shadow-sm: 0 10px 24px rgba(0, 0, 0, 0.14);
+    background-color: transparent !important;
 }
 
 #blazor-error-ui {
@@ -84,17 +180,23 @@ h1:focus {
 
 .wock-main-content {
     max-width: none !important;
-    min-height: calc(100vh - 3.25rem);
-    padding: 1.25rem 1.5rem 2rem;
+    min-height: 100vh;
+    padding: 1rem 1.75rem 2rem 2.25rem;
 }
 
 .wock-page-stack {
+    margin: 0 auto;
+    max-width: 96rem;
     width: 100%;
 }
 
 .wock-section,
 .wock-data-panel,
 .wock-metric-card {
+    -webkit-backdrop-filter: blur(var(--wock-glass-blur)) saturate(120%);
+    backdrop-filter: blur(var(--wock-glass-blur)) saturate(120%);
+    background: var(--wock-card) !important;
+    border: 1px solid var(--wock-glass-border) !important;
     border-radius: var(--wock-radius-lg) !important;
     box-shadow: var(--wock-container-shadow) !important;
     color: var(--wock-card-foreground);
@@ -102,11 +204,11 @@ h1:focus {
 
 .wock-section,
 .wock-metric-card {
-    padding: 1rem;
+    padding: 1.125rem;
 }
 
 .wock-metric-card {
-    min-height: 4.75rem;
+    min-height: 5.25rem;
 }
 
 .wock-metric-card > .mud-stack {
@@ -131,17 +233,110 @@ h1:focus {
 }
 
 .wock-active-timer {
-    min-height: 11.5rem;
+    min-height: 14rem;
+    overflow: hidden;
 }
 
 .wock-active-duration {
     font-variant-numeric: tabular-nums;
     font-weight: 700;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.055em;
+}
+
+.wock-dashboard-hero {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 245, 236, 0.78)),
+        radial-gradient(circle at 18% 16%, rgba(255, 144, 108, 0.18), transparent 20rem) !important;
+    border: 1px solid var(--wock-glass-border);
+    border-radius: calc(var(--wock-radius-lg) + 0.5rem) !important;
+    box-shadow: var(--wock-container-shadow) !important;
+    color: var(--wock-card-foreground);
+    overflow: hidden;
+    padding: 1rem 1.125rem;
+    position: relative;
+}
+
+.wock-layout-dark .wock-dashboard-hero {
+    background:
+        linear-gradient(135deg, rgba(36, 27, 53, 0.94), rgba(30, 23, 44, 0.9)),
+        radial-gradient(circle at 18% 16%, rgba(255, 144, 108, 0.14), transparent 20rem) !important;
+}
+
+.wock-dashboard-hero::after {
+    background:
+        linear-gradient(135deg, rgba(255, 144, 108, 0.36), rgba(236, 205, 255, 0.5));
+    border-radius: 999px;
+    content: "";
+    height: 8rem;
+    opacity: 0.22;
+    position: absolute;
+    right: -2.5rem;
+    top: -3rem;
+    width: 8rem;
+}
+
+.wock-dashboard-hero-grid {
+    align-items: stretch;
+    position: relative;
+    z-index: 1;
+}
+
+.wock-dashboard-intro {
+    height: 100%;
+    justify-content: space-between;
+    min-height: 8.75rem;
+}
+
+.wock-live-chip.mud-chip {
+    align-self: flex-start;
+    background: var(--wock-button-action-bg) !important;
+    border-color: var(--wock-button-action-border) !important;
+    color: var(--wock-button-action-fg) !important;
+}
+
+.wock-live-dot {
+    background: var(--wock-semantic-chart-accent);
+    border-radius: 999px;
+    box-shadow: 0 0 0 4px rgba(255, 144, 108, 0.16);
+    display: inline-block;
+    height: 0.45rem;
+    margin-right: 0.25rem;
+    width: 0.45rem;
+}
+
+.wock-hero-metric {
+    height: 100%;
+    min-height: 7rem;
+}
+
+.wock-active-timeplate {
+    background:
+        linear-gradient(135deg, rgba(255, 144, 108, 0.16), rgba(236, 205, 255, 0.34));
+    border: 1px solid var(--wock-glass-border);
+    border-radius: var(--wock-radius-lg);
+    padding: 0.875rem 1rem;
+}
+
+.wock-active-timer-empty {
+    min-height: 10.5rem;
+    justify-content: space-between;
+}
+
+.wock-timer-orb {
+    align-items: center;
+    background:
+        linear-gradient(135deg, var(--wock-color-primary), #ffd3c3);
+    border-radius: 1.25rem;
+    color: #ffffff;
+    display: inline-flex;
+    height: 3.25rem;
+    justify-content: center;
+    width: 3.25rem;
 }
 
 .wock-quick-switch {
     min-height: 100%;
+    padding: 1.35rem !important;
 }
 
 .wock-graph-card {
@@ -149,30 +344,36 @@ h1:focus {
 }
 
 .wock-week-chart {
-    background: var(--wock-muted);
-    border: 1px solid var(--wock-border);
-    border-radius: var(--wock-radius);
+    background:
+        linear-gradient(180deg, rgba(255, 144, 108, 0.09), rgba(255, 255, 255, 0.34)),
+        var(--wock-muted);
+    border: 1px solid var(--wock-glass-border);
+    border-radius: var(--wock-radius-lg);
     overflow: hidden;
-    padding: 0.25rem 0.25rem 0;
+    padding: 0.35rem 0.35rem 0;
+}
+
+.wock-week-chart .mud-chart-bar {
+    stroke-linecap: round;
 }
 
 .wock-quick-task-list {
     display: grid;
-    gap: 0.5rem;
+    gap: 0.75rem;
 }
 
 .wock-quick-task.mud-button-root {
     box-shadow: var(--wock-container-shadow-sm) !important;
     height: auto !important;
     justify-content: stretch !important;
-    min-height: 3.75rem !important;
-    padding: 0.625rem 0.75rem !important;
+    min-height: 5rem !important;
+    padding: 0.875rem 1rem !important;
     text-align: left !important;
     width: 100%;
 }
 
 .wock-quick-task.mud-button-outlined {
-    background: var(--wock-popover) !important;
+    background: var(--wock-glass-control) !important;
     border-color: var(--wock-border) !important;
     color: var(--wock-card-foreground) !important;
 }
@@ -182,13 +383,20 @@ h1:focus {
 }
 
 .wock-quick-task.mud-button-outlined:hover {
-    background: var(--wock-accent) !important;
-    border-color: var(--wock-brand) !important;
+    background: var(--wock-glass-control-strong) !important;
+    border-color: var(--wock-button-action-border) !important;
+}
+
+.wock-quick-task.mud-button-filled-primary {
+    background:
+        linear-gradient(135deg, rgba(255, 144, 108, 0.22), rgba(255, 244, 239, 0.88)),
+        var(--wock-color-surface-glass-strong) !important;
+    color: var(--wock-color-primary-readable) !important;
 }
 
 .wock-quick-task.mud-button-filled-primary .wock-quick-task-meta,
 .wock-quick-task.mud-button-filled-primary .wock-quick-task-action {
-    color: var(--wock-primary-foreground);
+    color: var(--wock-button-action-fg);
 }
 
 .wock-quick-task-paused.mud-button-root {
@@ -216,13 +424,14 @@ h1:focus {
 
 .wock-quick-task-title,
 .wock-quick-task-duration {
-    font-weight: 600;
+    font-size: 0.95rem;
+    font-weight: 650;
 }
 
 .wock-quick-task-meta,
 .wock-quick-task-action {
     color: var(--wock-muted-foreground);
-    font-size: 0.75rem;
+    font-size: 0.8rem;
 }
 
 .wock-quick-task-side {
@@ -232,8 +441,10 @@ h1:focus {
 }
 
 .wock-empty-state {
+    -webkit-backdrop-filter: blur(calc(var(--wock-glass-blur) * 0.55)) saturate(135%);
+    backdrop-filter: blur(calc(var(--wock-glass-blur) * 0.55)) saturate(135%);
     background: var(--wock-muted);
-    border: 1px dashed var(--wock-border);
+    border: 1px dashed var(--wock-glass-border);
     border-radius: var(--wock-radius-lg);
     padding: 1rem;
 }
@@ -267,17 +478,37 @@ h1:focus {
 }
 
 .wock-app-bar {
-    background: var(--wock-card) !important;
-    border-bottom: 1px solid var(--wock-border);
+    -webkit-backdrop-filter: blur(var(--wock-glass-blur)) saturate(150%);
+    backdrop-filter: blur(var(--wock-glass-blur)) saturate(150%);
+    background: rgba(255, 254, 253, 0.72) !important;
+    border-bottom: 1px solid rgba(239, 227, 246, 0.78);
     border-radius: 0 !important;
     box-shadow: none !important;
     color: var(--wock-foreground) !important;
+    padding-inline: 0.75rem 1.25rem !important;
+}
+
+.wock-layout-dark .wock-app-bar {
+    background: rgba(18, 13, 31, 0.72) !important;
+    border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .wock-drawer {
-    background: var(--wock-card) !important;
-    border-right: 1px solid var(--wock-border);
-    box-shadow: none !important;
+    background:
+        radial-gradient(circle at 20% 8%, rgba(255, 144, 108, 0.14), transparent 9rem),
+        linear-gradient(180deg, var(--wock-color-sidebar), var(--wock-color-sidebar-strong)) !important;
+    border: 1px solid var(--wock-glass-border);
+    border-radius: var(--wock-radius-lg);
+    box-shadow: 0 18px 40px rgba(33, 23, 47, 0.18) !important;
+    color: var(--wock-color-sidebar-foreground) !important;
+    left: 1rem !important;
+    max-height: calc(100vh - 2rem);
+    overflow: hidden;
+    top: 1rem !important;
+}
+
+.mud-drawer.wock-drawer {
+    height: calc(100vh - 2rem) !important;
 }
 
 .wock-shell-brand,
@@ -292,16 +523,42 @@ h1:focus {
     gap: 0.5rem;
 }
 
+.wock-sidebar-header {
+    align-items: center;
+    border-bottom: 1px solid var(--wock-border);
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+    min-height: 4.25rem;
+    padding: 0.875rem 0.75rem 0.875rem 0.875rem;
+}
+
+.wock-shell-copy {
+    display: grid;
+    gap: 0;
+}
+
+.wock-shell-subtitle {
+    color: var(--wock-muted-foreground);
+    line-height: 1 !important;
+    margin-top: -0.125rem !important;
+}
+
+.wock-drawer .wock-shell-subtitle {
+    color: var(--wock-color-sidebar-muted);
+}
+
 .wock-header-actions {
     gap: 0.25rem;
 }
 
 .wock-brand-mark {
-    background: var(--wock-brand);
-    border-radius: 999px;
+    background: linear-gradient(135deg, var(--wock-brand-mark-start), var(--wock-brand-mark-end));
+    border-radius: 0.375rem;
+    box-shadow: 0 0 0 4px var(--wock-brand-mark-ring);
     display: inline-block;
-    height: 0.625rem;
-    width: 0.625rem;
+    height: 1rem;
+    width: 1rem;
 }
 
 .wock-icon {
@@ -321,8 +578,8 @@ h1:focus {
 .wock-icon-button,
 .wock-header-link {
     align-items: center;
-    background: transparent;
-    border: 1px solid transparent;
+    background: var(--wock-glass-control);
+    border: 1px solid var(--wock-border);
     border-radius: var(--wock-radius-sm);
     color: var(--wock-foreground);
     display: inline-flex;
@@ -335,6 +592,13 @@ h1:focus {
     text-decoration: none;
 }
 
+.wock-sidebar-toggle {
+    background: rgba(255, 144, 108, 0.1);
+    border-color: rgba(255, 144, 108, 0.22);
+    color: var(--wock-color-sidebar-foreground);
+    flex: 0 0 auto;
+}
+
 .wock-icon-button {
     width: var(--wock-control-height);
 }
@@ -342,7 +606,7 @@ h1:focus {
 .wock-icon-button:hover,
 .wock-header-link:hover,
 .wock-nav-link:hover {
-    background: var(--wock-accent);
+    background: var(--wock-glass-control-strong);
     color: var(--wock-accent-foreground);
 }
 
@@ -368,6 +632,20 @@ h1:focus {
     margin-top: -0.125rem;
 }
 
+.wock-page-stack > .mud-typography-h3:first-child {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(255, 245, 236, 0.68));
+    border: 1px solid var(--wock-glass-border);
+    border-radius: var(--wock-radius-lg);
+    box-shadow: var(--wock-container-shadow-sm);
+    margin: 0 !important;
+    padding: 1rem 1.125rem;
+}
+
+.wock-layout-dark .wock-page-stack > .mud-typography-h3:first-child {
+    background: linear-gradient(135deg, rgba(36, 27, 53, 0.92), rgba(30, 23, 44, 0.82));
+}
+
 .wock-muted {
     color: var(--wock-muted-foreground);
 }
@@ -389,37 +667,58 @@ h1:focus {
 }
 
 .wock-nav-menu {
-    padding: 0.375rem 0.5rem;
+    padding: 0.875rem 0.625rem;
 }
 
 .wock-nav-link {
-    border-radius: var(--wock-radius-sm);
-    color: var(--wock-foreground) !important;
+    border-radius: 1rem;
+    color: var(--wock-color-sidebar-muted) !important;
     font-size: var(--wock-control-font-size);
-    margin: 0.0625rem 0;
-    min-height: 2rem;
+    margin: 0.1875rem 0;
+    min-height: 2.5rem;
+    position: relative;
 }
 
 .wock-nav-link .mud-nav-link,
 .mud-nav-link.wock-nav-link {
-    border-radius: var(--wock-radius-sm);
-    color: var(--wock-foreground) !important;
-    min-height: 2rem;
-    padding: 0 0.625rem;
+    border: 1px solid transparent;
+    border-radius: 1rem;
+    color: var(--wock-color-sidebar-muted) !important;
+    min-height: 2.5rem;
+    padding: 0 0.75rem;
+    position: relative;
 }
 
 .wock-nav-link .mud-nav-link:hover,
 .mud-nav-link.wock-nav-link:hover {
-    background: var(--wock-accent) !important;
-    color: var(--wock-brand-hover) !important;
+    background: rgba(255, 144, 108, 0.08) !important;
+    border-color: var(--wock-glass-border);
+    color: var(--wock-color-sidebar-foreground) !important;
+}
+
+.wock-layout-dark .wock-nav-link .mud-nav-link:hover,
+.wock-layout-dark .mud-nav-link.wock-nav-link:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
 }
 
 .wock-nav-link .mud-nav-link.active,
 .wock-nav-link .mud-nav-link.mud-nav-link.active,
 .mud-nav-link.wock-nav-link.active {
-    background: var(--wock-accent) !important;
-    color: var(--wock-brand-hover) !important;
+    background: rgba(255, 144, 108, 0.18) !important;
+    border-color: rgba(255, 144, 108, 0.42);
+    color: var(--wock-color-sidebar-foreground) !important;
     font-weight: 500;
+}
+
+.mud-nav-link.wock-nav-link.active::before {
+    background: var(--wock-nav-active-indicator);
+    border-radius: 999px;
+    bottom: 0.45rem;
+    content: "";
+    left: 0.25rem;
+    position: absolute;
+    top: 0.45rem;
+    width: 0.1875rem;
 }
 
 .wock-nav-content {
@@ -427,7 +726,21 @@ h1:focus {
 }
 
 .mud-drawer--closed.mud-drawer-mini .wock-nav-menu {
-    padding: 0.375rem;
+    padding: 0.75rem 0.5rem;
+}
+
+.mud-drawer--closed.mud-drawer-mini.wock-drawer {
+    left: 0.75rem !important;
+}
+
+.mud-drawer--closed.mud-drawer-mini .wock-sidebar-header {
+    justify-content: center;
+    min-height: 5.75rem;
+    padding: 0.75rem 0.5rem;
+}
+
+.mud-drawer--closed.mud-drawer-mini .wock-sidebar-header .wock-shell-brand {
+    display: none;
 }
 
 .mud-drawer--closed.mud-drawer-mini .wock-nav-link,
@@ -437,6 +750,12 @@ h1:focus {
     margin-inline: auto;
     min-width: 2.5rem;
     width: 2.5rem;
+}
+
+.mud-drawer--closed.mud-drawer-mini .mud-nav-link.wock-nav-link.active::before {
+    bottom: 0.5rem;
+    left: 0.125rem;
+    top: 0.5rem;
 }
 
 .mud-drawer--closed.mud-drawer-mini .wock-nav-link .mud-nav-link,
@@ -462,9 +781,72 @@ h1:focus {
     display: none;
 }
 
+.wock-theme-choice.mud-button-root {
+    height: auto !important;
+    justify-content: stretch !important;
+    min-height: 5rem !important;
+    padding: 1rem !important;
+    text-align: left !important;
+}
+
+.wock-theme-choice .mud-button-label {
+    width: 100%;
+}
+
+.wock-theme-choice-content {
+    align-items: center;
+    display: flex;
+    gap: 0.875rem;
+    width: 100%;
+}
+
+.wock-brand-preview {
+    align-items: center;
+    background:
+        linear-gradient(135deg, rgba(255, 144, 108, 0.14), rgba(236, 205, 255, 0.22)),
+        var(--wock-glass-control);
+    border: 1px solid var(--wock-border);
+    border-radius: var(--wock-radius-lg);
+    display: flex;
+    gap: 0.875rem;
+    padding: 1rem;
+}
+
+.wock-brand-preview .wock-brand-mark {
+    height: 2.75rem;
+    width: 2.75rem;
+}
+
+.wock-theme-choice-icon {
+    align-items: center;
+    background: var(--wock-glass-control-strong);
+    border: 1px solid var(--wock-border);
+    border-radius: 1rem;
+    display: inline-flex;
+    height: 2.75rem;
+    justify-content: center;
+    width: 2.75rem;
+}
+
+.wock-theme-choice-title,
+.wock-theme-choice-meta {
+    display: block;
+}
+
+.wock-theme-choice-title {
+    font-weight: 650;
+}
+
+.wock-theme-choice-meta {
+    color: var(--wock-muted-foreground);
+    font-size: 0.8rem;
+}
+
 .mud-card,
 .mud-alert,
 .mud-table-container {
+    -webkit-backdrop-filter: blur(var(--wock-glass-blur)) saturate(120%);
+    backdrop-filter: blur(var(--wock-glass-blur)) saturate(120%);
     background: var(--wock-card) !important;
     border-radius: var(--wock-radius-lg) !important;
     color: var(--wock-card-foreground) !important;
@@ -489,11 +871,11 @@ h1:focus {
 
 .mud-card,
 .mud-table-container {
-    border: 1px solid var(--wock-border);
+    border: 1px solid var(--wock-glass-border);
 }
 
 .mud-card-content {
-    padding: 0.875rem !important;
+    padding: 1rem !important;
 }
 
 .mud-card-actions {
@@ -502,8 +884,10 @@ h1:focus {
 
 .mud-popover,
 .mud-dialog {
+    -webkit-backdrop-filter: blur(var(--wock-glass-blur)) saturate(120%);
+    backdrop-filter: blur(var(--wock-glass-blur)) saturate(120%);
     background: var(--wock-popover) !important;
-    border: 1px solid var(--wock-border);
+    border: 1px solid var(--wock-glass-border);
     border-radius: var(--wock-radius-lg) !important;
     color: var(--wock-popover-foreground) !important;
 }
@@ -523,6 +907,7 @@ h1:focus {
 
 .mud-button-root {
     align-items: center !important;
+    border: 1px solid transparent !important;
     border-radius: var(--wock-radius-sm) !important;
     box-shadow: none !important;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Arial, sans-serif !important;
@@ -566,7 +951,7 @@ h1:focus {
 .mud-input,
 .mud-select,
 .mud-tooltip-root {
-    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease !important;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease !important;
 }
 
 .mud-button-root:focus-visible,
@@ -580,48 +965,50 @@ h1:focus {
     outline-offset: 2px;
 }
 
-.mud-button-filled-primary {
-    background: var(--wock-brand) !important;
-    color: var(--wock-primary-foreground) !important;
+.mud-button-filled-primary,
+.mud-button-filled-secondary {
+    -webkit-backdrop-filter: blur(calc(var(--wock-glass-blur) * 0.75)) saturate(150%);
+    backdrop-filter: blur(calc(var(--wock-glass-blur) * 0.75)) saturate(150%);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.12)),
+        var(--wock-button-action-bg) !important;
+    border-color: var(--wock-button-action-border) !important;
+    color: var(--wock-button-action-fg) !important;
 }
 
-.mud-button-filled-primary:hover {
-    background: var(--wock-brand-hover) !important;
+.mud-button-filled-primary:hover,
+.mud-button-filled-secondary:hover {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.16)),
+        var(--wock-button-action-bg-hover) !important;
     opacity: 1;
 }
 
 .mud-button-outlined-primary,
-.mud-button-text-primary {
-    border-color: var(--wock-brand) !important;
-    color: var(--wock-brand-hover) !important;
+.mud-button-text-primary,
+.mud-button-outlined-secondary,
+.mud-button-text-secondary {
+    border-color: var(--wock-button-action-border) !important;
+    color: var(--wock-button-action-fg) !important;
 }
 
 .mud-button-outlined-primary:hover,
-.mud-button-text-primary:hover {
-    background: var(--wock-brand-soft) !important;
-}
-
-.mud-button-filled-secondary {
-    background: var(--wock-secondary) !important;
-    color: var(--wock-secondary-foreground) !important;
-}
-
-.mud-button-outlined-secondary,
-.mud-button-text-secondary {
-    border-color: var(--wock-secondary) !important;
-    color: var(--mud-palette-secondary-darken) !important;
+.mud-button-text-primary:hover,
+.mud-button-outlined-secondary:hover,
+.mud-button-text-secondary:hover {
+    background: var(--wock-button-action-bg) !important;
 }
 
 .mud-button-outlined,
 .mud-button-outlined-default {
-    background: transparent !important;
+    background: var(--wock-glass-control) !important;
     border-color: var(--wock-border) !important;
     color: var(--wock-foreground) !important;
 }
 
 .mud-button-outlined:hover,
 .mud-button-text:hover {
-    background: var(--wock-accent) !important;
+    background: var(--wock-glass-control-strong) !important;
 }
 
 .mud-button-text,
@@ -661,7 +1048,7 @@ h1:focus {
 
 .mud-input {
     align-items: center !important;
-    background: var(--wock-card) !important;
+    background: var(--wock-glass-control-strong) !important;
     border: 1px solid var(--wock-input) !important;
     border-radius: var(--wock-radius-sm) !important;
     color: var(--wock-foreground) !important;
@@ -729,6 +1116,7 @@ h1:focus {
 
 .mud-input:hover,
 .mud-input-control:focus-within .mud-input {
+    background: var(--wock-popover) !important;
     border-color: var(--wock-ring) !important;
 }
 
@@ -759,12 +1147,12 @@ h1:focus {
 }
 
 .mud-table-container {
-    border: 1px solid var(--wock-border);
+    border: 1px solid var(--wock-glass-border);
     overflow: hidden;
 }
 
 .mud-table-root {
-    background: var(--wock-card) !important;
+    background: transparent !important;
 }
 
 .mud-table-root th.mud-table-cell {
@@ -791,19 +1179,52 @@ h1:focus {
 }
 
 .mud-table-row:hover {
-    background: var(--wock-muted) !important;
+    background: var(--wock-accent) !important;
 }
 
 .mud-chip {
+    background: var(--wock-glass-control) !important;
+    border-color: var(--wock-glass-border) !important;
     border-radius: var(--wock-radius-sm) !important;
     font-size: 0.75rem !important;
     height: var(--wock-control-height-sm) !important;
 }
 
 .mud-alert {
-    border: 1px solid var(--wock-border);
+    border: 1px solid var(--wock-glass-border);
     font-size: var(--wock-control-font-size) !important;
     padding: 0.5rem 0.625rem !important;
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    :root {
+        --wock-card: rgba(255, 255, 255, 0.92);
+        --wock-popover: rgba(255, 255, 255, 0.96);
+        --wock-glass-control: rgba(255, 255, 255, 0.86);
+        --wock-glass-control-strong: rgba(255, 255, 255, 0.94);
+    }
+
+    .wock-layout-dark {
+        --wock-card: rgba(15, 23, 42, 0.92);
+        --wock-popover: rgba(15, 23, 42, 0.96);
+        --wock-glass-control: rgba(15, 23, 42, 0.86);
+        --wock-glass-control-strong: rgba(15, 23, 42, 0.94);
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --wock-glass-blur: 4px;
+    }
+
+    .wock-main-content {
+        padding-inline: 1rem;
+    }
+
+    .wock-shell-subtitle,
+    .wock-header-link {
+        display: none;
+    }
 }
 
 .blazor-error-boundary {

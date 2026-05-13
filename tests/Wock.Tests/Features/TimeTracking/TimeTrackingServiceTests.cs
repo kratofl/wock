@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Wock.Common.Security;
 using Wock.Common.Time;
 using Wock.Data;
+using Wock.Features.Users.Models;
 using Wock.Features.TimeTracking;
 using Wock.Models;
 
@@ -13,6 +14,7 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
     private TestDbContextFactory _factory = null!;
     private FakeClock _clock = null!;
+    private MutableCurrentUserContext _currentUser = null!;
 
     [Fact]
     public async Task StartAsync_creates_running_entry_for_active_customer()
@@ -94,6 +96,128 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
 
         Assert.Contains("task", inactiveException.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("customer", ownershipException.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CreateManualAsync_creates_stopped_draft_entry_with_project_details()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        var customer = await AddCustomerAsync(context, "Acme");
+        var category = await context.ActivityCategories.SingleAsync(category => category.Name == "Entwicklung");
+        var project = await AddProjectAsync(context, customer.Id, "Relaunch");
+        var service = CreateService();
+        var startedAt = new DateTime(2026, 5, 7, 9, 0, 0, DateTimeKind.Utc);
+        var stoppedAt = startedAt.AddMinutes(90);
+
+        var entry = await service.CreateManualAsync(new ManualWorkEntryRequest(
+            customer.Id,
+            startedAt,
+            stoppedAt,
+            Description: "Build capture flow",
+            ProjectId: project.Id,
+            ActivityCategoryId: category.Id,
+            IsBillable: true));
+
+        Assert.Equal(customer.Id, entry.CustomerId);
+        Assert.Equal(project.Id, entry.ProjectId);
+        Assert.Equal(category.Id, entry.ActivityCategoryId);
+        Assert.Equal("Build capture flow", entry.Description);
+        Assert.True(entry.IsBillable);
+        Assert.Equal(WorkEntryStatus.Stopped, entry.Status);
+        Assert.Equal(TimeEntryReviewStatus.Draft, entry.ReviewStatus);
+        Assert.Equal(startedAt, entry.StartedAt);
+        Assert.Equal(stoppedAt, entry.StoppedAt);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_requires_completed_entry_project_category_and_description()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        var customer = await AddCustomerAsync(context, "Acme");
+        var service = CreateService();
+        var entry = await service.CreateManualAsync(new ManualWorkEntryRequest(
+            customer.Id,
+            _clock.UtcNow,
+            _clock.UtcNow.AddMinutes(30)));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.SubmitAsync(entry.Id));
+
+        Assert.Contains("project", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_marks_complete_draft_as_submitted()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        var customer = await AddCustomerAsync(context, "Acme");
+        var category = await context.ActivityCategories.SingleAsync(category => category.Name == "Entwicklung");
+        var project = await AddProjectAsync(context, customer.Id, "Relaunch");
+        var service = CreateService();
+        var entry = await service.CreateManualAsync(new ManualWorkEntryRequest(
+            customer.Id,
+            _clock.UtcNow,
+            _clock.UtcNow.AddMinutes(30),
+            Description: "Implement project selector",
+            ProjectId: project.Id,
+            ActivityCategoryId: category.Id));
+
+        var submitted = await service.SubmitAsync(entry.Id);
+
+        Assert.Equal(TimeEntryReviewStatus.Submitted, submitted.ReviewStatus);
+        await using var verificationContext = await _factory.CreateDbContextAsync();
+        var savedEntry = await verificationContext.WorkEntries.SingleAsync(workEntry => workEntry.Id == entry.Id);
+        Assert.Equal(TimeEntryReviewStatus.Submitted, savedEntry.ReviewStatus);
+    }
+
+    [Fact]
+    public async Task ApproveAsync_marks_submitted_entry_as_approved()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        var customer = await AddCustomerAsync(context, "Acme");
+        var category = await context.ActivityCategories.SingleAsync(category => category.Name == "Entwicklung");
+        var project = await AddProjectAsync(context, customer.Id, "Relaunch");
+        var service = CreateService();
+        var entry = await service.CreateManualAsync(new ManualWorkEntryRequest(
+            customer.Id,
+            _clock.UtcNow,
+            _clock.UtcNow.AddMinutes(30),
+            Description: "Implement approval",
+            ProjectId: project.Id,
+            ActivityCategoryId: category.Id));
+        await service.SubmitAsync(entry.Id);
+        _clock.UtcNow = _clock.UtcNow.AddHours(2);
+
+        var approved = await service.ApproveAsync(entry.Id);
+
+        Assert.Equal(TimeEntryReviewStatus.Approved, approved.ReviewStatus);
+        Assert.Equal(_clock.UtcNow, approved.ApprovedAt);
+        Assert.Equal(_currentUser.UserId, approved.ApprovedByUserId);
+        Assert.Null(approved.RejectionReason);
+    }
+
+    [Fact]
+    public async Task RejectAsync_marks_submitted_entry_as_rejected_with_reason()
+    {
+        await using var context = await _factory.CreateDbContextAsync();
+        var customer = await AddCustomerAsync(context, "Acme");
+        var category = await context.ActivityCategories.SingleAsync(category => category.Name == "Entwicklung");
+        var project = await AddProjectAsync(context, customer.Id, "Relaunch");
+        var service = CreateService();
+        var entry = await service.CreateManualAsync(new ManualWorkEntryRequest(
+            customer.Id,
+            _clock.UtcNow,
+            _clock.UtcNow.AddMinutes(30),
+            Description: "Implement rejection",
+            ProjectId: project.Id,
+            ActivityCategoryId: category.Id));
+        await service.SubmitAsync(entry.Id);
+
+        var rejected = await service.RejectAsync(entry.Id, " Missing details ");
+
+        Assert.Equal(TimeEntryReviewStatus.Rejected, rejected.ReviewStatus);
+        Assert.Equal("Missing details", rejected.RejectionReason);
+        Assert.Null(rejected.ApprovedAt);
+        Assert.Null(rejected.ApprovedByUserId);
     }
 
     [Fact]
@@ -187,7 +311,7 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
         var service = CreateService();
         var currentEntry = await service.SwitchToBookingTargetAsync(currentTarget.Id);
         _clock.UtcNow = _clock.UtcNow.AddMinutes(10);
-        var failingService = new TimeTrackingService(new FailingSwitchDbContextFactory(_connection, _clock), _clock);
+        var failingService = new TimeTrackingService(new FailingSwitchDbContextFactory(_connection, _clock), _clock, _currentUser);
 
         await Assert.ThrowsAsync<DbUpdateException>(() => failingService.SwitchToBookingTargetAsync(nextTarget.Id));
 
@@ -341,7 +465,7 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
         await using var context = await _factory.CreateDbContextAsync();
         var customer = await AddCustomerAsync(context, "Acme");
         var conflictFactory = new ConflictDbContextFactory(_connection, _clock);
-        var service = new TimeTrackingService(conflictFactory, _clock);
+        var service = new TimeTrackingService(conflictFactory, _clock, _currentUser);
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => service.StartAsync(customer.Id));
 
@@ -352,9 +476,12 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
     {
         await _connection.OpenAsync();
         _clock = new FakeClock { UtcNow = new DateTime(2026, 5, 7, 8, 0, 0, DateTimeKind.Utc) };
-        _factory = new TestDbContextFactory(_connection, _clock);
+        _currentUser = new MutableCurrentUserContext("reviewer-1", "Reviewer One");
+        _factory = new TestDbContextFactory(_connection, _clock, _currentUser);
         await using var context = await _factory.CreateDbContextAsync();
         await context.Database.EnsureCreatedAsync();
+        context.Users.Add(new ApplicationUser { Id = _currentUser.UserId!, UserName = "reviewer.one" });
+        await context.SaveChangesAsync();
     }
 
     public async Task DisposeAsync()
@@ -364,7 +491,7 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
 
     private TimeTrackingService CreateService()
     {
-        return new TimeTrackingService(_factory, _clock);
+        return new TimeTrackingService(_factory, _clock, _currentUser);
     }
 
     private static async Task<(WorkEntry? Entry, Exception? Exception)> CaptureStartAsync(TimeTrackingService service, int customerId)
@@ -406,12 +533,37 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
         return target;
     }
 
+    private static async Task<Project> AddProjectAsync(AppDbContext context, int customerId, string name)
+    {
+        var project = new Project
+        {
+            CustomerId = customerId,
+            Name = name,
+            Status = ProjectStatus.Active
+        };
+        context.Projects.Add(project);
+        await context.SaveChangesAsync();
+        return project;
+    }
+
     private sealed class FakeClock : ISystemClock
     {
         public DateTime UtcNow { get; set; }
     }
 
-    private sealed class TestDbContextFactory(SqliteConnection connection, ISystemClock clock) : IDbContextFactory<AppDbContext>
+    private sealed class MutableCurrentUserContext(string? userId, string? displayName) : ICurrentUserContext
+    {
+        public string? UserId { get; set; } = userId;
+
+        public string? DisplayName { get; set; } = displayName;
+
+        public bool IsAuthenticated => UserId is not null;
+    }
+
+    private sealed class TestDbContextFactory(
+        SqliteConnection connection,
+        ISystemClock clock,
+        ICurrentUserContext currentUserContext) : IDbContextFactory<AppDbContext>
     {
         public AppDbContext CreateDbContext()
         {
@@ -419,7 +571,7 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
                 .UseSqlite(connection)
                 .Options;
 
-            return new AppDbContext(options, AnonymousCurrentUserContext.Instance, clock);
+            return new AppDbContext(options, currentUserContext, clock);
         }
 
         public Task<AppDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default)
@@ -529,7 +681,3 @@ public sealed class TimeTrackingServiceTests : IAsyncLifetime
         }
     }
 }
-
-
-
-

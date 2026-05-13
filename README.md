@@ -101,7 +101,7 @@ Start the app locally, then open the URL printed by `dotnet run`. The main navig
 - Time Tracking: start, pause, stop, and quickly switch between tasks.
 - Reports: review tracked work.
 - Customers: manage customer records.
-- Tasks: manage reusable tasks and their booking references for tracked work.
+- Tasks: manage booking targets/tasks for tracked work.
 - Plugins: install, enable, disable, and inspect plugins.
 
 ## Structured logging

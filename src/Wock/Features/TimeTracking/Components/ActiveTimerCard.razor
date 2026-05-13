@@ -4,10 +4,13 @@
 {
     <MudCard Elevation="0" Outlined="true" Class="wock-data-panel wock-active-timer">
         <MudCardContent>
-            <MudStack Spacing="1">
-                <MudText Typo="Typo.overline" Class="wock-metric-label">Current tracking</MudText>
-                <MudText Typo="Typo.h5">Ready to track</MudText>
-                <MudText Typo="Typo.body2" Class="wock-muted">Choose a task to start tracking instantly.</MudText>
+            <MudStack Spacing="2" Class="wock-active-timer-empty">
+                <span class="wock-timer-orb" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.overline" Class="wock-metric-label">Current tracking</MudText>
+                    <MudText Typo="Typo.h5">Ready to track</MudText>
+                    <MudText Typo="Typo.body2" Class="wock-muted">Choose a task to start tracking instantly.</MudText>
+                </MudStack>
             </MudStack>
         </MudCardContent>
     </MudCard>
@@ -21,7 +24,9 @@ else
                     <MudText Typo="Typo.overline" Class="wock-metric-label">Current tracking</MudText>
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@Entry.Status</MudChip>
                 </MudStack>
-                <MudText Typo="Typo.h3" Class="wock-active-duration">@FormatDuration(NetDuration)</MudText>
+                <div class="wock-active-timeplate">
+                    <MudText Typo="Typo.h3" Class="wock-active-duration">@FormatDuration(NetDuration)</MudText>
+                </div>
                 <MudStack Spacing="0">
                     <MudText Typo="Typo.h6">@CurrentTaskName</MudText>
                     <MudText Typo="Typo.body2" Class="wock-muted">@Entry.Customer?.Name</MudText>

@@ -5,7 +5,7 @@
     <MudStack Spacing="2">
         <MudGrid Spacing="2">
             <MudItem xs="12" md="6">
-                <MudSelect T="int" Label="Customer" @bind-Value="_model.CustomerId" Disabled="@Disabled" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelect T="int" Label="Customer" Value="@_model.CustomerId" ValueChanged="CustomerChanged" Disabled="@Disabled" Variant="Variant.Outlined" Margin="Margin.Dense">
                     <MudSelectItem T="int" Value="0">Select a customer</MudSelectItem>
                     @foreach (var customer in Customers)
                     {
@@ -15,7 +15,34 @@
             </MudItem>
 
             <MudItem xs="12" md="6">
-                <MudSelect T="int?" Label="Task" @bind-Value="_model.BookingTargetId" Disabled="@Disabled" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelect T="int?" Label="Project" Value="@_model.ProjectId" ValueChanged="ProjectChanged" Disabled="@Disabled" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var project in AvailableProjects)
+                    {
+                        <MudSelectItem T="int?" Value="@project.Id">@project.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudSelect T="int?" Label="Activity" @bind-Value="_model.ActivityCategoryId" Disabled="@Disabled" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var category in ActivityCategories.Where(category => category.IsActive).OrderBy(category => category.SortOrder))
+                    {
+                        <MudSelectItem T="int?" Value="@category.Id">@category.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudSelect T="int?" Label="Project task" @bind-Value="_model.ProjectTaskId" Disabled="@Disabled" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var task in AvailableProjectTasks)
+                    {
+                        <MudSelectItem T="int?" Value="@task.Id">@task.Title</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+
+            <MudItem xs="12" md="6">
+                <MudSelect T="int?" Label="Recent preset" @bind-Value="_model.BookingTargetId" Disabled="@Disabled" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
                     @foreach (var target in AvailableBookingTargets)
                     {
                         <MudSelectItem T="int?" Value="@target.Id">@target.Name</MudSelectItem>
@@ -30,11 +57,15 @@
             <MudItem xs="12" md="6">
                 <MudTextField T="string" Label="Description" Lines="3" @bind-Value="_model.Description" Disabled="@Disabled" Variant="Variant.Outlined" Margin="Margin.Dense" />
             </MudItem>
+
+            <MudItem xs="12">
+                <MudCheckBox T="bool" Label="Billable" @bind-Value="_model.IsBillable" Disabled="@Disabled" Color="Color.Primary" />
+            </MudItem>
         </MudGrid>
 
         <StatusMessage Message="@_message" Kind="@Severity.Warning" />
 
-        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(Disabled || !Customers.Any())">Start custom tracking</MudButton>
+        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(Disabled || !Customers.Any())">Start tracking</MudButton>
     </MudStack>
 </EditForm>
 
@@ -49,6 +80,15 @@
     public IEnumerable<BookingTarget> BookingTargets { get; set; } = [];
 
     [Parameter]
+    public IEnumerable<Project> Projects { get; set; } = [];
+
+    [Parameter]
+    public IEnumerable<ProjectTask> ProjectTasks { get; set; } = [];
+
+    [Parameter]
+    public IEnumerable<ActivityCategory> ActivityCategories { get; set; } = [];
+
+    [Parameter]
     public bool Disabled { get; set; }
 
     [Parameter]
@@ -56,6 +96,34 @@
 
     private IEnumerable<BookingTarget> AvailableBookingTargets => BookingTargets
         .Where(target => _model.CustomerId == 0 || target.CustomerId == _model.CustomerId);
+
+    private IEnumerable<Project> AvailableProjects => Projects
+        .Where(project => _model.CustomerId == 0 || project.CustomerId == _model.CustomerId)
+        .Where(project => project.Status is not ProjectStatus.Archived);
+
+    private IEnumerable<ProjectTask> AvailableProjectTasks => ProjectTasks
+        .Where(task => _model.CustomerId == 0 || task.Project.CustomerId == _model.CustomerId)
+        .Where(task => _model.ProjectId is null || task.ProjectId == _model.ProjectId)
+        .Where(task => task.Status is not ProjectTaskStatus.Archived);
+
+    private void CustomerChanged(int customerId)
+    {
+        _model.CustomerId = customerId;
+        if (_model.ProjectId is not null && !AvailableProjects.Any(project => project.Id == _model.ProjectId.Value))
+        {
+            _model.ProjectId = null;
+            _model.ProjectTaskId = null;
+        }
+    }
+
+    private void ProjectChanged(int? projectId)
+    {
+        _model.ProjectId = projectId;
+        if (_model.ProjectTaskId is not null && !AvailableProjectTasks.Any(task => task.Id == _model.ProjectTaskId.Value))
+        {
+            _model.ProjectTaskId = null;
+        }
+    }
 
     private async Task SubmitAsync()
     {
@@ -70,10 +138,18 @@
             _model.CustomerId,
             _model.BookingTargetId,
             _model.ExternalTicketId,
-            _model.Description));
+            _model.Description,
+            _model.ProjectId,
+            _model.ProjectTaskId,
+            _model.ActivityCategoryId,
+            _model.IsBillable));
         _model.BookingTargetId = null;
+        _model.ProjectId = null;
+        _model.ProjectTaskId = null;
+        _model.ActivityCategoryId = null;
         _model.ExternalTicketId = null;
         _model.Description = null;
+        _model.IsBillable = true;
     }
 
     private sealed class FormModel
@@ -82,8 +158,16 @@
 
         public int? BookingTargetId { get; set; }
 
+        public int? ProjectId { get; set; }
+
+        public int? ProjectTaskId { get; set; }
+
+        public int? ActivityCategoryId { get; set; }
+
         public string? ExternalTicketId { get; set; }
 
         public string? Description { get; set; }
+
+        public bool IsBillable { get; set; } = true;
     }
 }

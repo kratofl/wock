@@ -13,13 +13,22 @@ public sealed record ReportFilter(
     DateOnly ToDate,
     int? CustomerId = null,
     int? BookingTargetId = null,
-    string? ExternalTicketId = null);
+    string? ExternalTicketId = null,
+    int? ProjectId = null,
+    TimeEntryReviewStatus? ReviewStatus = null,
+    bool? IsBillable = null);
 
 public sealed record ReportRow(
     int WorkEntryId,
     DateOnly Date,
     string CustomerName,
+    string? ProjectName,
     string? TaskName,
+    string? ActivityCategoryName,
+    bool IsBillable,
+    TimeEntryReviewStatus ReviewStatus,
+    decimal? HourlyRate,
+    decimal? BillableAmount,
     string? BookingSystem,
     string? BookingReference,
     string? ExternalReference,
@@ -32,6 +41,7 @@ public sealed record ReportRow(
 public sealed record ReportFilterOptions(
     IReadOnlyList<Customer> Customers,
     IReadOnlyList<BookingTarget> BookingTargets,
+    IReadOnlyList<Project> Projects,
     IReadOnlyList<WockPluginMetadata> BookingConnectors);
 
 public sealed class ReportService
@@ -54,7 +64,13 @@ public sealed class ReportService
     [
         "Date",
         "Customer",
+        "Project",
         "Task",
+        "Activity category",
+        "Billable",
+        "Review status",
+        "Hourly rate",
+        "Billable amount",
         "Booking system",
         "Booking reference",
         "External reference",
@@ -78,6 +94,9 @@ public sealed class ReportService
             .AsNoTracking()
             .Include(entry => entry.Customer)
             .Include(entry => entry.BookingTarget)
+            .Include(entry => entry.Project)
+            .Include(entry => entry.ProjectTask)
+            .Include(entry => entry.ActivityCategory)
             .Where(entry => entry.Status == WorkEntryStatus.Stopped && entry.StoppedAt != null)
             .Where(entry => entry.StartedAt >= from && entry.StartedAt < toExclusive);
 
@@ -89,6 +108,21 @@ public sealed class ReportService
         if (filter.BookingTargetId is not null)
         {
             query = query.Where(entry => entry.BookingTargetId == filter.BookingTargetId);
+        }
+
+        if (filter.ProjectId is not null)
+        {
+            query = query.Where(entry => entry.ProjectId == filter.ProjectId);
+        }
+
+        if (filter.ReviewStatus is not null)
+        {
+            query = query.Where(entry => entry.ReviewStatus == filter.ReviewStatus);
+        }
+
+        if (filter.IsBillable is not null)
+        {
+            query = query.Where(entry => entry.IsBillable == filter.IsBillable);
         }
 
         if (externalTicketId is not null)
@@ -123,7 +157,13 @@ public sealed class ReportService
             [
                 row.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 row.CustomerName,
+                row.ProjectName ?? string.Empty,
                 row.TaskName ?? string.Empty,
+                row.ActivityCategoryName ?? string.Empty,
+                row.IsBillable ? "Yes" : "No",
+                row.ReviewStatus.ToString(),
+                row.HourlyRate?.ToString("0.00", CultureInfo.InvariantCulture) ?? string.Empty,
+                row.BillableAmount?.ToString("0.00", CultureInfo.InvariantCulture) ?? string.Empty,
                 row.BookingSystem ?? string.Empty,
                 row.BookingReference ?? string.Empty,
                 row.ExternalReference ?? string.Empty,
@@ -151,6 +191,13 @@ public sealed class ReportService
             .OrderBy(target => target.Customer.Name)
             .ThenBy(target => target.Name)
             .ToListAsync(cancellationToken);
+        var projects = await context.Projects
+            .AsNoTracking()
+            .Include(project => project.Customer)
+            .Where(project => project.Status != ProjectStatus.Archived)
+            .OrderBy(project => project.Customer.Name)
+            .ThenBy(project => project.Name)
+            .ToListAsync(cancellationToken);
 
         var bookingConnectors = _pluginRegistry is null
             ? []
@@ -158,7 +205,7 @@ public sealed class ReportService
                 .Select(connector => connector.Metadata)
                 .ToList();
 
-        return new ReportFilterOptions(customers, bookingTargets, bookingConnectors);
+        return new ReportFilterOptions(customers, bookingTargets, projects, bookingConnectors);
     }
 
     private static ReportRow ToReportRow(WorkEntry entry)
@@ -173,11 +220,22 @@ public sealed class ReportService
             netDuration = TimeSpan.Zero;
         }
 
+        var hourlyRate = entry.HourlyRate ?? entry.Project?.DefaultHourlyRate ?? entry.Customer.DefaultHourlyRate;
+        decimal? billableAmount = entry.IsBillable && hourlyRate.HasValue
+            ? decimal.Round((decimal)netDuration.TotalHours * hourlyRate.Value, 2)
+            : null;
+
         return new ReportRow(
             entry.Id,
             DateOnly.FromDateTime(entry.StartedAt),
             entry.Customer.Name,
-            entry.BookingTarget?.Name,
+            entry.Project?.Name,
+            entry.ProjectTask?.Title ?? entry.BookingTarget?.Name,
+            entry.ActivityCategory?.Name,
+            entry.IsBillable,
+            entry.ReviewStatus,
+            hourlyRate,
+            billableAmount,
             entry.BookingTarget?.BookingSoftware,
             entry.BookingTarget?.BookingTicketId,
             entry.ExternalTicketId,

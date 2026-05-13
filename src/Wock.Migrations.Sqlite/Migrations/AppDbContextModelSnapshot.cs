@@ -52,6 +52,140 @@ namespace Wock.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("Wock.Features.Users.Models.ApplicationUserRole", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Role");
+
+                    b.HasIndex("UserId", "Role")
+                        .IsUnique();
+
+                    b.ToTable("UserRoles");
+                });
+
+            modelBuilder.Entity("Wock.Models.ActivityCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("SortOrder");
+
+                    b.ToTable("ActivityCategories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            IsActive = true,
+                            Name = "Beratung",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = 2,
+                            IsActive = true,
+                            Name = "Entwicklung",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            IsActive = true,
+                            Name = "Design",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = 4,
+                            IsActive = true,
+                            Name = "Projektmanagement",
+                            SortOrder = 40
+                        },
+                        new
+                        {
+                            Id = 5,
+                            IsActive = true,
+                            Name = "Support",
+                            SortOrder = 50
+                        },
+                        new
+                        {
+                            Id = 6,
+                            IsActive = true,
+                            Name = "Testing",
+                            SortOrder = 60
+                        },
+                        new
+                        {
+                            Id = 7,
+                            IsActive = true,
+                            Name = "Dokumentation",
+                            SortOrder = 70
+                        },
+                        new
+                        {
+                            Id = 8,
+                            IsActive = true,
+                            Name = "Administration",
+                            SortOrder = 80
+                        },
+                        new
+                        {
+                            Id = 9,
+                            IsActive = true,
+                            Name = "Vertrieb",
+                            SortOrder = 90
+                        },
+                        new
+                        {
+                            Id = 10,
+                            IsActive = true,
+                            Name = "Meeting",
+                            SortOrder = 100
+                        },
+                        new
+                        {
+                            Id = 11,
+                            IsActive = true,
+                            Name = "Sonstiges",
+                            SortOrder = 110
+                        });
+                });
+
             modelBuilder.Entity("Wock.Models.BookingTarget", b =>
                 {
                     b.Property<int>("Id")
@@ -122,11 +256,27 @@ namespace Wock.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("BillingAddress")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CreatedByUserId")
                         .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("DefaultHourlyRate")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(320)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
@@ -150,6 +300,10 @@ namespace Wock.Migrations
 
                     b.Property<string>("OwnerUserId")
                         .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -249,16 +403,181 @@ namespace Wock.Migrations
                     b.ToTable("InstalledPlugins");
                 });
 
+            modelBuilder.Entity("Wock.Models.Project", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BillingModel")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("BudgetAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("BudgetHours")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("DefaultHourlyRate")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("EndsOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ModifiedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("StartsOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("ModifiedByUserId");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("CustomerId", "Name");
+
+                    b.ToTable("Projects");
+                });
+
+            modelBuilder.Entity("Wock.Models.ProjectTask", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ActivityCategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AssignedUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ModifiedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OwnerUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivityCategoryId");
+
+                    b.HasIndex("AssignedUserId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ModifiedByUserId");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("ProjectId", "Title");
+
+                    b.ToTable("ProjectTasks");
+                });
+
             modelBuilder.Entity("Wock.Models.WorkEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("ActiveSlot")
+                    b.Property<string>("ActiveOwnerSlot")
                         .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("INTEGER")
-                        .HasComputedColumnSql("CASE WHEN Status IN ('Running', 'Paused') THEN 1 ELSE NULL END");
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT")
+                        .HasComputedColumnSql("CASE WHEN Status IN ('Running', 'Paused') THEN COALESCE(OwnerUserId, '') ELSE NULL END");
+
+                    b.Property<int?>("ActivityCategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ApprovedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BillingCategory")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("BookingTargetId")
                         .HasColumnType("INTEGER");
@@ -281,6 +600,15 @@ namespace Wock.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal?>("HourlyRate")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsBillable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
                     b.Property<DateTime?>("ModifiedAt")
                         .HasColumnType("TEXT");
 
@@ -291,6 +619,23 @@ namespace Wock.Migrations
                     b.Property<string>("OwnerUserId")
                         .HasMaxLength(450)
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("ProjectId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ProjectTaskId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReviewStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Draft");
 
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("TEXT");
@@ -308,10 +653,14 @@ namespace Wock.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ActiveSlot")
+                    b.HasIndex("ActiveOwnerSlot")
                         .IsUnique()
                         .HasDatabaseName("IX_WorkEntries_OneActiveEntry")
-                        .HasFilter("ActiveSlot IS NOT NULL");
+                        .HasFilter("ActiveOwnerSlot IS NOT NULL");
+
+                    b.HasIndex("ActivityCategoryId");
+
+                    b.HasIndex("ApprovedByUserId");
 
                     b.HasIndex("BookingTargetId");
 
@@ -325,11 +674,21 @@ namespace Wock.Migrations
 
                     b.HasIndex("OwnerUserId");
 
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("ProjectTaskId");
+
+                    b.HasIndex("ReviewStatus");
+
                     b.HasIndex("StartedAt");
 
                     b.HasIndex("Status");
 
                     b.HasIndex("CustomerId", "StartedAt");
+
+                    b.HasIndex("OwnerUserId", "ReviewStatus");
+
+                    b.HasIndex("ProjectId", "StartedAt");
 
                     b.HasIndex("Status", "StartedAt");
 
@@ -361,6 +720,17 @@ namespace Wock.Migrations
                     b.HasIndex("WorkEntryId");
 
                     b.ToTable("WorkEntryPauses");
+                });
+
+            modelBuilder.Entity("Wock.Features.Users.Models.ApplicationUserRole", b =>
+                {
+                    b.HasOne("Wock.Features.Users.Models.ApplicationUser", "User")
+                        .WithMany("Roles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Wock.Models.BookingTarget", b =>
@@ -420,8 +790,84 @@ namespace Wock.Migrations
                         .OnDelete(DeleteBehavior.ClientNoAction);
                 });
 
+            modelBuilder.Entity("Wock.Models.Project", b =>
+                {
+                    b.HasOne("Wock.Features.Users.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.ClientNoAction);
+
+                    b.HasOne("Wock.Models.Customer", "Customer")
+                        .WithMany("Projects")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Wock.Features.Users.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ModifiedByUserId")
+                        .OnDelete(DeleteBehavior.ClientNoAction);
+
+                    b.HasOne("Wock.Features.Users.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.ClientNoAction);
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("Wock.Models.ProjectTask", b =>
+                {
+                    b.HasOne("Wock.Models.ActivityCategory", "ActivityCategory")
+                        .WithMany("ProjectTasks")
+                        .HasForeignKey("ActivityCategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Wock.Features.Users.Models.ApplicationUser", "AssignedUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedUserId")
+                        .OnDelete(DeleteBehavior.ClientNoAction);
+
+                    b.HasOne("Wock.Features.Users.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.ClientNoAction);
+
+                    b.HasOne("Wock.Features.Users.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ModifiedByUserId")
+                        .OnDelete(DeleteBehavior.ClientNoAction);
+
+                    b.HasOne("Wock.Features.Users.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.ClientNoAction);
+
+                    b.HasOne("Wock.Models.Project", "Project")
+                        .WithMany("Tasks")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ActivityCategory");
+
+                    b.Navigation("AssignedUser");
+
+                    b.Navigation("Project");
+                });
+
             modelBuilder.Entity("Wock.Models.WorkEntry", b =>
                 {
+                    b.HasOne("Wock.Models.ActivityCategory", "ActivityCategory")
+                        .WithMany("WorkEntries")
+                        .HasForeignKey("ActivityCategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Wock.Features.Users.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.ClientNoAction);
+
                     b.HasOne("Wock.Models.BookingTarget", "BookingTarget")
                         .WithMany("WorkEntries")
                         .HasForeignKey("BookingTargetId")
@@ -448,9 +894,25 @@ namespace Wock.Migrations
                         .HasForeignKey("OwnerUserId")
                         .OnDelete(DeleteBehavior.ClientNoAction);
 
+                    b.HasOne("Wock.Models.Project", "Project")
+                        .WithMany("WorkEntries")
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Wock.Models.ProjectTask", "ProjectTask")
+                        .WithMany("WorkEntries")
+                        .HasForeignKey("ProjectTaskId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ActivityCategory");
+
                     b.Navigation("BookingTarget");
 
                     b.Navigation("Customer");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("ProjectTask");
                 });
 
             modelBuilder.Entity("Wock.Models.WorkEntryPause", b =>
@@ -464,6 +926,18 @@ namespace Wock.Migrations
                     b.Navigation("WorkEntry");
                 });
 
+            modelBuilder.Entity("Wock.Features.Users.Models.ApplicationUser", b =>
+                {
+                    b.Navigation("Roles");
+                });
+
+            modelBuilder.Entity("Wock.Models.ActivityCategory", b =>
+                {
+                    b.Navigation("ProjectTasks");
+
+                    b.Navigation("WorkEntries");
+                });
+
             modelBuilder.Entity("Wock.Models.BookingTarget", b =>
                 {
                     b.Navigation("WorkEntries");
@@ -473,6 +947,20 @@ namespace Wock.Migrations
                 {
                     b.Navigation("BookingTargets");
 
+                    b.Navigation("Projects");
+
+                    b.Navigation("WorkEntries");
+                });
+
+            modelBuilder.Entity("Wock.Models.Project", b =>
+                {
+                    b.Navigation("Tasks");
+
+                    b.Navigation("WorkEntries");
+                });
+
+            modelBuilder.Entity("Wock.Models.ProjectTask", b =>
+                {
                     b.Navigation("WorkEntries");
                 });
 

@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
+using Wock.Common.Security;
 using Wock.Common.Time;
 using Wock.Data;
 using Wock.Features.TimeTracking;
@@ -25,6 +26,7 @@ public sealed class TimeTrackingComponentTests : BunitContext, IDisposable
         Services.AddMudServices(config => config.PopoverOptions.CheckForPopoverProvider = false);
         Services.AddSingleton<IDbContextFactory<AppDbContext>>(_factory);
         Services.AddSingleton<ISystemClock>(_clock);
+        Services.AddSingleton<ICurrentUserContext>(AnonymousCurrentUserContext.Instance);
         Services.AddScoped<TimeTrackingService>();
         using var context = _factory.CreateDbContext();
         context.Database.EnsureCreated();
@@ -63,9 +65,12 @@ public sealed class TimeTrackingComponentTests : BunitContext, IDisposable
             .Add(component => component.BookingTargets, Array.Empty<BookingTarget>()));
 
         Assert.Contains("Customer", cut.Markup);
+        Assert.Contains("Project", cut.Markup);
+        Assert.Contains("Activity", cut.Markup);
         Assert.Contains("External ticket", cut.Markup);
         Assert.Contains("Description", cut.Markup);
-        Assert.Contains("Start custom tracking", cut.Markup);
+        Assert.Contains("Billable", cut.Markup);
+        Assert.Contains("Start tracking", cut.Markup);
     }
 
     [Fact]
@@ -77,13 +82,12 @@ public sealed class TimeTrackingComponentTests : BunitContext, IDisposable
 
         var cut = Render<Dashboard>();
 
-        Assert.Contains("Tasks", cut.Markup);
-        Assert.Contains("Time Tracking", cut.Markup);
-        Assert.Contains("Week trend", cut.Markup);
-        Assert.Contains("Minutes per day", cut.Markup);
-        Assert.Contains("Monday - Sunday", cut.Markup);
-        Assert.Contains("No tasks ready yet", cut.Markup);
-        Assert.Contains("Create tasks", cut.Markup);
+        Assert.Contains("Arbeitszeit", cut.Markup);
+        Assert.Contains("Zeit starten", cut.Markup);
+        Assert.Contains("Zuletzt genutzt", cut.Markup);
+        Assert.Contains("Heute", cut.Markup);
+        Assert.Contains("No presets ready yet", cut.Markup);
+        Assert.Contains("Create presets", cut.Markup);
     }
 
     [Fact]
@@ -184,7 +188,8 @@ public sealed class TimeTrackingComponentTests : BunitContext, IDisposable
 
         var cut = Render<Dashboard>();
 
-        Assert.Contains("00:20:00 this week", cut.Markup);
+        Assert.Contains("This week", cut.Markup);
+        Assert.Contains("00:20:00", cut.Markup);
         Assert.DoesNotContain("00:50:00 this week", cut.Markup);
     }
 
@@ -239,4 +244,3 @@ public sealed class TimeTrackingComponentTests : BunitContext, IDisposable
         }
     }
 }
-

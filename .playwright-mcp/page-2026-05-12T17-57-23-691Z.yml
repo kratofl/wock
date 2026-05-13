@@ -1,0 +1,75 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - toolbar [ref=e4]:
+      - button "Toggle navigation" [ref=e5] [cursor=pointer]
+      - heading "Wock" [level=6] [ref=e9]
+      - generic [ref=e10]:
+        - button "Switch to dark theme" [ref=e12] [cursor=pointer]
+        - link "Docs" [ref=e14] [cursor=pointer]:
+          - /url: https://learn.microsoft.com/aspnet/core/
+          - text: Docs
+  - complementary [ref=e16]:
+    - navigation [ref=e18]:
+      - link "Time Tracking" [ref=e20] [cursor=pointer]:
+        - /url: ""
+        - generic [ref=e24]: Time Tracking
+      - link "Reports" [ref=e26] [cursor=pointer]:
+        - /url: reports
+        - generic [ref=e30]: Reports
+      - link "Plugins" [ref=e32] [cursor=pointer]:
+        - /url: plugins
+        - generic [ref=e36]: Plugins
+      - link "Customers" [ref=e38] [cursor=pointer]:
+        - /url: customers
+        - generic [ref=e42]: Customers
+      - link "Tasks" [ref=e44] [cursor=pointer]:
+        - /url: booking-targets
+        - generic [ref=e48]: Tasks
+  - group [ref=e51]:
+    - group [ref=e52]:
+      - generic [ref=e53]: Tracking home
+      - heading "Tasks & Time Tracking" [level=3] [ref=e54]
+      - paragraph [ref=e55]: Start, resume, or switch tasks with one deliberate click.
+    - generic [ref=e56]:
+      - group [ref=e58]:
+        - group [ref=e61]:
+          - generic [ref=e62]: Current tracking
+          - heading "Ready to track" [level=5] [ref=e63]
+          - paragraph [ref=e64]: Choose a task to start tracking instantly.
+        - group [ref=e66]:
+          - generic [ref=e69]: Today tracked
+          - heading "00:00:00" [level=5] [ref=e70]
+          - paragraph [ref=e71]: 0 entries today
+        - group [ref=e73]:
+          - generic [ref=e76]: Week trend
+          - generic [ref=e77]: Minutes per day
+          - generic "Tracked time Monday to Sunday" [ref=e78]:
+            - img [ref=e81]:
+              - generic [ref=e84]:
+                - generic [ref=e85]: "0"
+                - generic [ref=e86]: "15"
+              - generic [ref=e87]:
+                - generic [ref=e88]: Mo
+                - generic [ref=e89]: Tu
+                - generic [ref=e90]: We
+                - generic [ref=e91]: Th
+                - generic [ref=e92]: Fr
+                - generic [ref=e93]: Sa
+                - generic [ref=e94]: Su
+          - generic [ref=e96]: Monday - Sunday
+          - paragraph [ref=e97]: 00:09:10 this week
+      - group [ref=e100]:
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - heading "Tasks" [level=5] [ref=e103]
+            - paragraph [ref=e104]: Most recent tasks are first. Click a task to start or switch tracking.
+          - generic [ref=e107]: 0 ready
+        - group [ref=e109]:
+          - heading "No tasks ready yet" [level=6] [ref=e110]
+          - paragraph [ref=e111]: Create a customer and task once, then use this page for fast switching.
+          - link "Create tasks" [ref=e112] [cursor=pointer]:
+            - /url: booking-targets
+            - generic [ref=e113]: Create tasks
+    - generic [ref=e117]:
+      - generic [ref=e118]: Custom start with details
+      - img [ref=e119]

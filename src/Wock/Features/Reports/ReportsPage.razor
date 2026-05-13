@@ -34,6 +34,28 @@
                         }
                     </MudSelect>
                 </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="int?" Label="Project" Value="@_selectedProjectId" ValueChanged="ProjectChanged" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var project in AvailableProjects)
+                        {
+                            <MudSelectItem T="int?" Value="@project.Id">@FormatProjectOption(project)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="TimeEntryReviewStatus?" Label="Review status" @bind-Value="_selectedReviewStatus" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var status in ReviewStatuses)
+                        {
+                            <MudSelectItem T="TimeEntryReviewStatus?" Value="@status">@status</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="bool?" Label="Billable" @bind-Value="_selectedBillable" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem T="bool?" Value="@true">Billable</MudSelectItem>
+                        <MudSelectItem T="bool?" Value="@false">Non-billable</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
                 <MudItem xs="12" sm="6" md="4">
                     <MudTextField T="string" Label="External ticket" Value="@_externalTicketId" ValueChanged="ExternalTicketChanged" Variant="Variant.Outlined" Margin="Margin.Dense" />
                 </MudItem>
@@ -67,11 +89,36 @@
         </MudStack>
     </MudPaper>
 
+    <MudGrid Spacing="3">
+        <MudItem xs="12" sm="4">
+            <MudPaper Elevation="0" Class="wock-stat-card">
+                <MudText Typo="Typo.caption" Class="wock-muted">Total net</MudText>
+                <MudText Typo="Typo.h5">@FormatDuration(TotalNetDuration)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Elevation="0" Class="wock-stat-card">
+                <MudText Typo="Typo.caption" Class="wock-muted">Billable net</MudText>
+                <MudText Typo="Typo.h5">@FormatDuration(BillableNetDuration)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Elevation="0" Class="wock-stat-card">
+                <MudText Typo="Typo.caption" Class="wock-muted">Billable amount</MudText>
+                <MudText Typo="Typo.h5">@FormatCurrency(BillableAmount)</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
     <MudTable Items="_rows" Hover="true" Dense="true">
         <HeaderContent>
             <MudTh>Date</MudTh>
             <MudTh>Customer</MudTh>
+            <MudTh>Project</MudTh>
             <MudTh>Task</MudTh>
+            <MudTh>Activity</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Billing</MudTh>
             <MudTh>Reference</MudTh>
             <MudTh>Description</MudTh>
             <MudTh>Time</MudTh>
@@ -81,7 +128,16 @@
         <RowTemplate>
             <MudTd DataLabel="Date">@context.Date.ToString("yyyy-MM-dd")</MudTd>
             <MudTd DataLabel="Customer">@context.CustomerName</MudTd>
+            <MudTd DataLabel="Project">@(context.ProjectName ?? "-")</MudTd>
             <MudTd DataLabel="Task">@FormatTaskName(context)</MudTd>
+            <MudTd DataLabel="Activity">@(context.ActivityCategoryName ?? "-")</MudTd>
+            <MudTd DataLabel="Status">@context.ReviewStatus</MudTd>
+            <MudTd DataLabel="Billing">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.body2">@(context.IsBillable ? "Billable" : "Non-billable")</MudText>
+                    <MudText Typo="Typo.caption" Class="wock-muted">@FormatCurrency(context.BillableAmount)</MudText>
+                </MudStack>
+            </MudTd>
             <MudTd DataLabel="Reference">
                 <MudStack Spacing="1">
                     @if (HasBookingReference(context))
@@ -126,16 +182,21 @@
 @code {
     private IReadOnlyList<Customer> _customers = [];
     private IReadOnlyList<BookingTarget> _bookingTargets = [];
+    private IReadOnlyList<Project> _projects = [];
     private IReadOnlyList<Wock.Abstractions.WockPluginMetadata> _bookingConnectors = [];
     private IReadOnlyList<ReportRow> _rows = [];
     private DateOnly _fromDate = DateOnly.FromDateTime(DateTime.UtcNow.Date.AddDays(-30));
     private DateOnly _toDate = DateOnly.FromDateTime(DateTime.UtcNow.Date);
     private int? _selectedCustomerId = null;
     private int? _selectedBookingTargetId = null;
+    private int? _selectedProjectId = null;
+    private TimeEntryReviewStatus? _selectedReviewStatus = null;
+    private bool? _selectedBillable = null;
     private string? _externalTicketId = null;
     private string? _message;
     private Severity _messageSeverity = Severity.Info;
     private string? _csvDownloadUrl;
+    private static readonly TimeEntryReviewStatus[] ReviewStatuses = Enum.GetValues<TimeEntryReviewStatus>();
 
     private DateTime? FromDateValue => _fromDate.ToDateTime(TimeOnly.MinValue);
 
@@ -147,11 +208,26 @@
             .Where(task => task.CustomerId == _selectedCustomerId.Value)
             .ToList();
 
+    private IReadOnlyList<Project> AvailableProjects => _selectedCustomerId is null
+        ? _projects
+        : _projects
+            .Where(project => project.CustomerId == _selectedCustomerId.Value)
+            .ToList();
+
+    private TimeSpan TotalNetDuration => TimeSpan.FromSeconds(_rows.Sum(row => row.NetDuration.TotalSeconds));
+
+    private TimeSpan BillableNetDuration => TimeSpan.FromSeconds(_rows.Where(row => row.IsBillable).Sum(row => row.NetDuration.TotalSeconds));
+
+    private decimal? BillableAmount => _rows.Any(row => row.BillableAmount.HasValue)
+        ? _rows.Sum(row => row.BillableAmount ?? 0m)
+        : null;
+
     protected override async Task OnInitializedAsync()
     {
         var options = await ReportService.GetFilterOptionsAsync();
         _customers = options.Customers;
         _bookingTargets = options.BookingTargets;
+        _projects = options.Projects;
         _bookingConnectors = options.BookingConnectors;
         await LoadReportAsync();
     }
@@ -194,7 +270,10 @@
             _toDate,
             _selectedCustomerId,
             _selectedBookingTargetId,
-            _externalTicketId);
+            _externalTicketId,
+            _selectedProjectId,
+            _selectedReviewStatus,
+            _selectedBillable);
     }
 
     private void FromDateChanged(DateTime? value)
@@ -220,6 +299,11 @@
         {
             _selectedBookingTargetId = null;
         }
+
+        if (_selectedProjectId is not null && !AvailableProjects.Any(project => project.Id == _selectedProjectId))
+        {
+            _selectedProjectId = null;
+        }
     }
 
     private void TaskChanged(int? bookingTargetId)
@@ -237,6 +321,21 @@
         }
     }
 
+    private void ProjectChanged(int? projectId)
+    {
+        _selectedProjectId = projectId;
+        if (projectId is null)
+        {
+            return;
+        }
+
+        var project = _projects.SingleOrDefault(project => project.Id == projectId.Value);
+        if (project is not null)
+        {
+            _selectedCustomerId = project.CustomerId;
+        }
+    }
+
     private void ExternalTicketChanged(string? externalTicketId)
     {
         _externalTicketId = externalTicketId;
@@ -245,6 +344,11 @@
     private static string FormatTaskOption(BookingTarget task)
     {
         return $"{task.Customer.Name} - {task.Name}";
+    }
+
+    private static string FormatProjectOption(Project project)
+    {
+        return $"{project.Customer.Name} - {project.Name}";
     }
 
     private static string FormatTaskName(ReportRow row)
@@ -286,5 +390,10 @@
     private static string FormatDuration(TimeSpan duration)
     {
         return $"{(int)duration.TotalHours:00}:{duration.Minutes:00}:{duration.Seconds:00}";
+    }
+
+    private static string FormatCurrency(decimal? amount)
+    {
+        return amount?.ToString("0.00", CultureInfo.InvariantCulture) ?? "-";
     }
 }

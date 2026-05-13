@@ -1,76 +1,326 @@
 @page "/customers"
+@using Microsoft.EntityFrameworkCore
+@using Wock.Data
 @using Wock.Models
 @inject CustomerService CustomerService
+@inject ProjectService ProjectService
+@inject IDbContextFactory<AppDbContext> DbContextFactory
 
 <MudStack Spacing="3" Class="wock-page-stack">
-    <MudText Typo="Typo.h3">Customers</MudText>
+    <MudStack Spacing="1">
+        <MudText Typo="Typo.h3">Kunden & Projekte</MudText>
+        <MudText Typo="Typo.body1" Class="wock-muted">Kundenstammdaten, Projekte, Aufgaben und Abrechnungsdetails an einem Ort.</MudText>
+    </MudStack>
 
     <StatusMessage Message="@_message" Kind="@_messageSeverity" />
 
-    <MudPaper Elevation="0" Class="wock-section">
-        <MudStack Spacing="2">
-            <MudText Typo="Typo.h5">Create customer</MudText>
-            <MudTextField T="string" Label="Name" @bind-Value="_newCustomer.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
-            <MudTextField T="string" Label="Notes" Lines="3" @bind-Value="_newCustomer.Notes" Variant="Variant.Outlined" Margin="Margin.Dense" />
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateAsync">Create customer</MudButton>
-        </MudStack>
-    </MudPaper>
+    <MudGrid Spacing="3">
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="0" Class="wock-section">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h5">Neuer Kunde</MudText>
+                    <MudTextField T="string" Label="Name" @bind-Value="_newCustomer.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField T="string" Label="Ansprechpartner" @bind-Value="_newCustomer.ContactName" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField T="string" Label="E-Mail" @bind-Value="_newCustomer.Email" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField T="string" Label="Telefon" @bind-Value="_newCustomer.PhoneNumber" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudNumericField T="decimal?" Label="Standard-Stundensatz" @bind-Value="_newCustomer.DefaultHourlyRate" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                    <MudTextField T="string" Label="Rechnungsadresse" Lines="3" @bind-Value="_newCustomer.BillingAddress" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField T="string" Label="Notizen" Lines="3" @bind-Value="_newCustomer.Notes" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateCustomerAsync">Kunde anlegen</MudButton>
+                </MudStack>
+            </MudPaper>
 
-    <MudText Typo="Typo.h5">Active customers</MudText>
+            <MudPaper Elevation="0" Class="wock-section mt-4">
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.h5">Aktive Kunden</MudText>
+                    @if (_customers.Count == 0)
+                    {
+                        <MudText>No active customers.</MudText>
+                    }
+                    else
+                    {
+                        <MudList T="Customer" Dense="true">
+                            @foreach (var customer in _customers)
+                            {
+                                <MudListItem Value="@customer" OnClick="() => SelectCustomerAsync(customer.Id)">
+                                    <MudStack Spacing="0">
+                                        <MudText Typo="Typo.body1">@customer.Name</MudText>
+                                        <MudText Typo="Typo.caption" Class="wock-muted">@CustomerSubtitle(customer)</MudText>
+                                    </MudStack>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
 
-    @if (_customers.Count == 0)
-    {
-        <MudText>No active customers.</MudText>
-    }
-    else
-    {
-        <MudTable Items="_customers" Hover="true" Dense="true">
-            <HeaderContent>
-                <MudTh>Name</MudTh>
-                <MudTh>Notes</MudTh>
-                <MudTh></MudTh>
-            </HeaderContent>
-            <RowTemplate Context="customer">
-                @{
-                    var model = _editModels[customer.Id];
-                }
-                <MudTd DataLabel="Name">
-                    <MudTextField T="string" aria-label="Customer name" @bind-Value="model.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudTd>
-                <MudTd DataLabel="Notes">
-                    <MudTextField T="string" aria-label="Customer notes" @bind-Value="model.Notes" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudTd>
-                <MudTd>
-                    <div class="wock-button-row">
-                        <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small" OnClick="() => UpdateAsync(customer.Id)">Save</MudButton>
-                        <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small" OnClick="() => DeactivateAsync(customer.Id)">Deactivate</MudButton>
-                    </div>
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
-    }
+        <MudItem xs="12" md="8">
+            @if (SelectedCustomer is null)
+            {
+                <MudPaper Elevation="0" Class="wock-section">
+                    <MudText>Lege einen Kunden an oder waehle einen aktiven Kunden aus, um Projekte und Aufgaben zu verwalten.</MudText>
+                </MudPaper>
+            }
+            else
+            {
+                var customerModel = _customerEditModels[SelectedCustomer.Id];
+                <MudPaper Elevation="0" Class="wock-section">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.h5">Kundendaten</MudText>
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" md="6">
+                                <MudTextField T="string" Label="Name" @bind-Value="customerModel.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudTextField T="string" Label="Ansprechpartner" @bind-Value="customerModel.ContactName" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudTextField T="string" Label="E-Mail" @bind-Value="customerModel.Email" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudTextField T="string" Label="Telefon" @bind-Value="customerModel.PhoneNumber" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudNumericField T="decimal?" Label="Standard-Stundensatz" @bind-Value="customerModel.DefaultHourlyRate" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudTextField T="string" Label="Rechnungsadresse" Lines="3" @bind-Value="customerModel.BillingAddress" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudTextField T="string" Label="Notizen" Lines="3" @bind-Value="customerModel.Notes" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                        </MudGrid>
+                        <div class="wock-button-row">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => UpdateCustomerAsync(SelectedCustomer.Id)">Kunde speichern</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => DeactivateCustomerAsync(SelectedCustomer.Id)">Deaktivieren</MudButton>
+                        </div>
+                    </MudStack>
+                </MudPaper>
+
+                <MudPaper Elevation="0" Class="wock-section mt-4">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.h5">Projekt anlegen</MudText>
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" md="6">
+                                <MudTextField T="string" Label="Projektname" @bind-Value="_newProject.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudSelect T="ProjectStatus" Label="Status" @bind-Value="_newProject.Status" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                    @foreach (var status in ProjectStatuses)
+                                    {
+                                        <MudSelectItem Value="@status">@status</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudSelect T="BillingModel" Label="Abrechnungsmodell" @bind-Value="_newProject.BillingModel" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                    @foreach (var model in BillingModels)
+                                    {
+                                        <MudSelectItem Value="@model">@model</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudNumericField T="decimal?" Label="Stundensatz" @bind-Value="_newProject.DefaultHourlyRate" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudNumericField T="decimal?" Label="Budget Stunden" @bind-Value="_newProject.BudgetHours" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudNumericField T="decimal?" Label="Budget Betrag" @bind-Value="_newProject.BudgetAmount" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudTextField T="string" Label="Beschreibung" Lines="3" @bind-Value="_newProject.Description" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                            </MudItem>
+                        </MudGrid>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateProjectAsync">Projekt anlegen</MudButton>
+                    </MudStack>
+                </MudPaper>
+
+                <MudStack Spacing="2" Class="mt-4">
+                    <MudText Typo="Typo.h5">Projekte & Aufgaben</MudText>
+                    @if (_projects.Count == 0)
+                    {
+                        <MudText>No projects for this customer.</MudText>
+                    }
+                    else
+                    {
+                        <MudExpansionPanels MultiExpansion="true">
+                            @foreach (var project in _projects)
+                            {
+                                var projectModel = _projectEditModels[project.Id];
+                                <MudExpansionPanel Text="@project.Name">
+                                    <MudStack Spacing="2">
+                                        <MudGrid Spacing="2">
+                                            <MudItem xs="12" md="6">
+                                                <MudTextField T="string" Label="Projektname" @bind-Value="projectModel.Name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                            </MudItem>
+                                            <MudItem xs="12" md="6">
+                                                <MudSelect T="ProjectStatus" Label="Status" @bind-Value="projectModel.Status" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                                    @foreach (var status in ProjectStatuses)
+                                                    {
+                                                        <MudSelectItem Value="@status">@status</MudSelectItem>
+                                                    }
+                                                </MudSelect>
+                                            </MudItem>
+                                            <MudItem xs="12" md="6">
+                                                <MudSelect T="BillingModel" Label="Abrechnungsmodell" @bind-Value="projectModel.BillingModel" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                                    @foreach (var model in BillingModels)
+                                                    {
+                                                        <MudSelectItem Value="@model">@model</MudSelectItem>
+                                                    }
+                                                </MudSelect>
+                                            </MudItem>
+                                            <MudItem xs="12" md="6">
+                                                <MudNumericField T="decimal?" Label="Stundensatz" @bind-Value="projectModel.DefaultHourlyRate" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                                            </MudItem>
+                                            <MudItem xs="12" md="6">
+                                                <MudNumericField T="decimal?" Label="Budget Stunden" @bind-Value="projectModel.BudgetHours" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                                            </MudItem>
+                                            <MudItem xs="12" md="6">
+                                                <MudNumericField T="decimal?" Label="Budget Betrag" @bind-Value="projectModel.BudgetAmount" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                                            </MudItem>
+                                            <MudItem xs="12">
+                                                <MudTextField T="string" Label="Beschreibung" Lines="3" @bind-Value="projectModel.Description" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                            </MudItem>
+                                        </MudGrid>
+                                        <div class="wock-button-row">
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="() => UpdateProjectAsync(project.Id)">Projekt speichern</MudButton>
+                                            <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small" OnClick="() => ArchiveProjectAsync(project.Id)">Archivieren</MudButton>
+                                        </div>
+
+                                        <MudDivider />
+                                        <MudText Typo="Typo.h6">Aufgaben</MudText>
+                                        <MudGrid Spacing="2">
+                                            <MudItem xs="12" md="4">
+                                                <MudTextField T="string" Label="Aufgabe" @bind-Value="_newTask.Title" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                            </MudItem>
+                                            <MudItem xs="12" md="4">
+                                                <MudSelect T="int?" Label="Kategorie" @bind-Value="_newTask.ActivityCategoryId" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                                    @foreach (var category in _activityCategories)
+                                                    {
+                                                        <MudSelectItem T="int?" Value="@category.Id">@category.Name</MudSelectItem>
+                                                    }
+                                                </MudSelect>
+                                            </MudItem>
+                                            <MudItem xs="12" md="4">
+                                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => CreateTaskAsync(project.Id)">Aufgabe anlegen</MudButton>
+                                            </MudItem>
+                                            <MudItem xs="12">
+                                                <MudTextField T="string" Label="Beschreibung" @bind-Value="_newTask.Description" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                            </MudItem>
+                                        </MudGrid>
+
+                                        @if (project.Tasks.Count == 0)
+                                        {
+                                            <MudText>No tasks for this project.</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudTable Items="project.Tasks.Where(task => task.Status != ProjectTaskStatus.Archived)" Hover="true" Dense="true">
+                                                <HeaderContent>
+                                                    <MudTh>Aufgabe</MudTh>
+                                                    <MudTh>Kategorie</MudTh>
+                                                    <MudTh>Status</MudTh>
+                                                    <MudTh></MudTh>
+                                                </HeaderContent>
+                                                <RowTemplate Context="task">
+                                                    @{
+                                                        var taskModel = _taskEditModels[task.Id];
+                                                    }
+                                                    <MudTd DataLabel="Aufgabe">
+                                                        <MudTextField T="string" @bind-Value="taskModel.Title" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                                    </MudTd>
+                                                    <MudTd DataLabel="Kategorie">
+                                                        <MudSelect T="int?" @bind-Value="taskModel.ActivityCategoryId" Clearable="true" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                                            @foreach (var category in _activityCategories)
+                                                            {
+                                                                <MudSelectItem T="int?" Value="@category.Id">@category.Name</MudSelectItem>
+                                                            }
+                                                        </MudSelect>
+                                                    </MudTd>
+                                                    <MudTd DataLabel="Status">
+                                                        <MudSelect T="ProjectTaskStatus" @bind-Value="taskModel.Status" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                                            @foreach (var status in TaskStatuses)
+                                                            {
+                                                                <MudSelectItem Value="@status">@status</MudSelectItem>
+                                                            }
+                                                        </MudSelect>
+                                                    </MudTd>
+                                                    <MudTd>
+                                                        <div class="wock-button-row">
+                                                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" OnClick="() => UpdateTaskAsync(task.Id)">Speichern</MudButton>
+                                                            <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small" OnClick="() => ArchiveTaskAsync(task.Id)">Archivieren</MudButton>
+                                                        </div>
+                                                    </MudTd>
+                                                </RowTemplate>
+                                            </MudTable>
+                                        }
+                                    </MudStack>
+                                </MudExpansionPanel>
+                            }
+                        </MudExpansionPanels>
+                    }
+                </MudStack>
+            }
+        </MudItem>
+    </MudGrid>
 </MudStack>
 
 @code {
+    private static readonly BillingModel[] BillingModels = Enum.GetValues<BillingModel>();
+    private static readonly ProjectStatus[] ProjectStatuses = Enum.GetValues<ProjectStatus>().Where(status => status != ProjectStatus.Archived).ToArray();
+    private static readonly ProjectTaskStatus[] TaskStatuses = Enum.GetValues<ProjectTaskStatus>().Where(status => status != ProjectTaskStatus.Archived).ToArray();
+
     private readonly CustomerFormModel _newCustomer = new();
-    private readonly Dictionary<int, CustomerFormModel> _editModels = [];
+    private readonly ProjectFormModel _newProject = new();
+    private readonly ProjectTaskFormModel _newTask = new();
+    private readonly Dictionary<int, CustomerFormModel> _customerEditModels = [];
+    private readonly Dictionary<int, ProjectFormModel> _projectEditModels = [];
+    private readonly Dictionary<int, ProjectTaskFormModel> _taskEditModels = [];
     private IReadOnlyList<Customer> _customers = [];
+    private IReadOnlyList<Project> _projects = [];
+    private IReadOnlyList<ActivityCategory> _activityCategories = [];
+    private int? _selectedCustomerId;
     private string? _message;
     private Severity _messageSeverity = Severity.Info;
 
+    private Customer? SelectedCustomer => _selectedCustomerId is null
+        ? null
+        : _customers.FirstOrDefault(customer => customer.Id == _selectedCustomerId.Value);
+
     protected override async Task OnInitializedAsync()
     {
-        await RefreshAsync();
+        await RefreshCustomersAsync();
+        _selectedCustomerId = _customers.FirstOrDefault()?.Id;
+        await RefreshSupportingDataAsync();
+        await RefreshProjectsAsync();
     }
 
-    private async Task CreateAsync()
+    private async Task SelectCustomerAsync(int customerId)
+    {
+        _selectedCustomerId = customerId;
+        ResetProjectForm();
+        ResetTaskForm();
+        await RefreshProjectsAsync();
+    }
+
+    private async Task CreateCustomerAsync()
     {
         try
         {
-            await CustomerService.CreateAsync(_newCustomer.Name, _newCustomer.Notes);
-            _newCustomer.Name = string.Empty;
-            _newCustomer.Notes = string.Empty;
-            _message = "Customer created.";
+            var customer = await CustomerService.CreateAsync(
+                _newCustomer.Name,
+                _newCustomer.Notes,
+                _newCustomer.ContactName,
+                _newCustomer.Email,
+                _newCustomer.PhoneNumber,
+                _newCustomer.BillingAddress,
+                _newCustomer.DefaultHourlyRate);
+            _selectedCustomerId = customer.Id;
+            ResetCustomerForm(_newCustomer);
+            _message = "Kunde angelegt.";
             _messageSeverity = Severity.Success;
         }
         catch (Exception exception)
@@ -79,16 +329,25 @@
             _messageSeverity = Severity.Error;
         }
 
-        await RefreshAsync();
+        await RefreshCustomersAsync();
+        await RefreshProjectsAsync();
     }
 
-    private async Task UpdateAsync(int customerId)
+    private async Task UpdateCustomerAsync(int customerId)
     {
         try
         {
-            var model = _editModels[customerId];
-            await CustomerService.UpdateAsync(customerId, model.Name, model.Notes);
-            _message = "Customer updated.";
+            var model = _customerEditModels[customerId];
+            await CustomerService.UpdateAsync(
+                customerId,
+                model.Name,
+                model.Notes,
+                model.ContactName,
+                model.Email,
+                model.PhoneNumber,
+                model.BillingAddress,
+                model.DefaultHourlyRate);
+            _message = "Kunde gespeichert.";
             _messageSeverity = Severity.Success;
         }
         catch (Exception exception)
@@ -97,15 +356,15 @@
             _messageSeverity = Severity.Error;
         }
 
-        await RefreshAsync();
+        await RefreshCustomersAsync();
     }
 
-    private async Task DeactivateAsync(int customerId)
+    private async Task DeactivateCustomerAsync(int customerId)
     {
         try
         {
             await CustomerService.DeactivateAsync(customerId);
-            _message = "Customer deactivated.";
+            _message = "Kunde deaktiviert.";
             _messageSeverity = Severity.Success;
         }
         catch (Exception exception)
@@ -114,27 +373,294 @@
             _messageSeverity = Severity.Error;
         }
 
-        await RefreshAsync();
+        await RefreshCustomersAsync();
+        _selectedCustomerId = _customers.FirstOrDefault()?.Id;
+        await RefreshProjectsAsync();
     }
 
-    private async Task RefreshAsync()
+    private async Task CreateProjectAsync()
+    {
+        if (_selectedCustomerId is null)
+        {
+            _message = "Waehle zuerst einen Kunden aus.";
+            _messageSeverity = Severity.Warning;
+            return;
+        }
+
+        try
+        {
+            await ProjectService.CreateProjectAsync(
+                _selectedCustomerId.Value,
+                _newProject.Name,
+                _newProject.Description,
+                _newProject.BudgetHours,
+                _newProject.BudgetAmount,
+                _newProject.BillingModel,
+                _newProject.DefaultHourlyRate,
+                _newProject.Status);
+            ResetProjectForm();
+            _message = "Projekt angelegt.";
+            _messageSeverity = Severity.Success;
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+            _messageSeverity = Severity.Error;
+        }
+
+        await RefreshProjectsAsync();
+    }
+
+    private async Task UpdateProjectAsync(int projectId)
+    {
+        try
+        {
+            var model = _projectEditModels[projectId];
+            await ProjectService.UpdateProjectAsync(
+                projectId,
+                model.Name,
+                model.Description,
+                model.BudgetHours,
+                model.BudgetAmount,
+                model.BillingModel,
+                model.DefaultHourlyRate,
+                model.Status);
+            _message = "Projekt gespeichert.";
+            _messageSeverity = Severity.Success;
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+            _messageSeverity = Severity.Error;
+        }
+
+        await RefreshProjectsAsync();
+    }
+
+    private async Task ArchiveProjectAsync(int projectId)
+    {
+        try
+        {
+            await ProjectService.ArchiveProjectAsync(projectId);
+            _message = "Projekt archiviert.";
+            _messageSeverity = Severity.Success;
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+            _messageSeverity = Severity.Error;
+        }
+
+        await RefreshProjectsAsync();
+    }
+
+    private async Task CreateTaskAsync(int projectId)
+    {
+        try
+        {
+            await ProjectService.CreateTaskAsync(
+                projectId,
+                _newTask.Title,
+                _newTask.Description,
+                _newTask.ActivityCategoryId,
+                _newTask.Status);
+            ResetTaskForm();
+            _message = "Aufgabe angelegt.";
+            _messageSeverity = Severity.Success;
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+            _messageSeverity = Severity.Error;
+        }
+
+        await RefreshProjectsAsync();
+    }
+
+    private async Task UpdateTaskAsync(int taskId)
+    {
+        try
+        {
+            var model = _taskEditModels[taskId];
+            await ProjectService.UpdateTaskAsync(
+                taskId,
+                model.Title,
+                model.Description,
+                model.ActivityCategoryId,
+                model.Status);
+            _message = "Aufgabe gespeichert.";
+            _messageSeverity = Severity.Success;
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+            _messageSeverity = Severity.Error;
+        }
+
+        await RefreshProjectsAsync();
+    }
+
+    private async Task ArchiveTaskAsync(int taskId)
+    {
+        try
+        {
+            await ProjectService.ArchiveTaskAsync(taskId);
+            _message = "Aufgabe archiviert.";
+            _messageSeverity = Severity.Success;
+        }
+        catch (Exception exception)
+        {
+            _message = exception.Message;
+            _messageSeverity = Severity.Error;
+        }
+
+        await RefreshProjectsAsync();
+    }
+
+    private async Task RefreshCustomersAsync()
     {
         _customers = await CustomerService.ListActiveAsync();
-        _editModels.Clear();
+        _customerEditModels.Clear();
         foreach (var customer in _customers)
         {
-            _editModels[customer.Id] = new CustomerFormModel
+            _customerEditModels[customer.Id] = new CustomerFormModel
             {
                 Name = customer.Name,
+                ContactName = customer.ContactName ?? string.Empty,
+                Email = customer.Email ?? string.Empty,
+                PhoneNumber = customer.PhoneNumber ?? string.Empty,
+                BillingAddress = customer.BillingAddress ?? string.Empty,
+                DefaultHourlyRate = customer.DefaultHourlyRate,
                 Notes = customer.Notes ?? string.Empty
             };
         }
+    }
+
+    private async Task RefreshSupportingDataAsync()
+    {
+        await using var context = await DbContextFactory.CreateDbContextAsync();
+        _activityCategories = await context.ActivityCategories
+            .Where(category => category.IsActive)
+            .OrderBy(category => category.SortOrder)
+            .ThenBy(category => category.Name)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    private async Task RefreshProjectsAsync()
+    {
+        _projects = _selectedCustomerId is null
+            ? []
+            : await ProjectService.ListForCustomerAsync(_selectedCustomerId.Value);
+
+        _projectEditModels.Clear();
+        _taskEditModels.Clear();
+        foreach (var project in _projects)
+        {
+            _projectEditModels[project.Id] = new ProjectFormModel
+            {
+                Name = project.Name,
+                Description = project.Description ?? string.Empty,
+                BudgetHours = project.BudgetHours,
+                BudgetAmount = project.BudgetAmount,
+                BillingModel = project.BillingModel,
+                DefaultHourlyRate = project.DefaultHourlyRate,
+                Status = project.Status
+            };
+
+            foreach (var task in project.Tasks)
+            {
+                _taskEditModels[task.Id] = new ProjectTaskFormModel
+                {
+                    Title = task.Title,
+                    Description = task.Description ?? string.Empty,
+                    ActivityCategoryId = task.ActivityCategoryId,
+                    Status = task.Status
+                };
+            }
+        }
+    }
+
+    private static string CustomerSubtitle(Customer customer)
+    {
+        return customer.ContactName
+            ?? customer.Email
+            ?? customer.PhoneNumber
+            ?? "Keine Kontaktdaten";
+    }
+
+    private static void ResetCustomerForm(CustomerFormModel model)
+    {
+        model.Name = string.Empty;
+        model.ContactName = string.Empty;
+        model.Email = string.Empty;
+        model.PhoneNumber = string.Empty;
+        model.BillingAddress = string.Empty;
+        model.DefaultHourlyRate = null;
+        model.Notes = string.Empty;
+    }
+
+    private void ResetProjectForm()
+    {
+        _newProject.Name = string.Empty;
+        _newProject.Description = string.Empty;
+        _newProject.BudgetHours = null;
+        _newProject.BudgetAmount = null;
+        _newProject.BillingModel = BillingModel.Hourly;
+        _newProject.DefaultHourlyRate = SelectedCustomer?.DefaultHourlyRate;
+        _newProject.Status = ProjectStatus.Active;
+    }
+
+    private void ResetTaskForm()
+    {
+        _newTask.Title = string.Empty;
+        _newTask.Description = string.Empty;
+        _newTask.ActivityCategoryId = null;
+        _newTask.Status = ProjectTaskStatus.Open;
     }
 
     private sealed class CustomerFormModel
     {
         public string Name { get; set; } = string.Empty;
 
+        public string ContactName { get; set; } = string.Empty;
+
+        public string Email { get; set; } = string.Empty;
+
+        public string PhoneNumber { get; set; } = string.Empty;
+
+        public string BillingAddress { get; set; } = string.Empty;
+
+        public decimal? DefaultHourlyRate { get; set; }
+
         public string Notes { get; set; } = string.Empty;
+    }
+
+    private sealed class ProjectFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string Description { get; set; } = string.Empty;
+
+        public decimal? BudgetHours { get; set; }
+
+        public decimal? BudgetAmount { get; set; }
+
+        public BillingModel BillingModel { get; set; } = BillingModel.Hourly;
+
+        public decimal? DefaultHourlyRate { get; set; }
+
+        public ProjectStatus Status { get; set; } = ProjectStatus.Active;
+    }
+
+    private sealed class ProjectTaskFormModel
+    {
+        public string Title { get; set; } = string.Empty;
+
+        public string Description { get; set; } = string.Empty;
+
+        public int? ActivityCategoryId { get; set; }
+
+        public ProjectTaskStatus Status { get; set; } = ProjectTaskStatus.Open;
     }
 }

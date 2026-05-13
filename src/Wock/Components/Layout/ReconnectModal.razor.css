@@ -21,8 +21,10 @@
 
 
 #components-reconnect-modal {
-    background-color: var(--wock-card);
-    border: 1px solid var(--wock-border);
+    -webkit-backdrop-filter: blur(var(--wock-glass-blur)) saturate(145%);
+    backdrop-filter: blur(var(--wock-glass-blur)) saturate(145%);
+    background-color: var(--wock-popover);
+    border: 1px solid var(--wock-glass-border);
     border-radius: var(--wock-radius-lg);
     color: var(--wock-card-foreground);
     width: 18rem;
@@ -89,9 +91,9 @@
 }
 
 #components-reconnect-modal button {
-    border: 1px solid var(--wock-border);
-    background-color: var(--wock-foreground);
-    color: var(--wock-background);
+    border: 1px solid var(--wock-button-action-border);
+    background-color: var(--wock-button-action-bg);
+    color: var(--wock-button-action-fg);
     font: inherit;
     font-size: var(--wock-control-font-size);
     min-height: var(--wock-control-height);
@@ -102,12 +104,12 @@
 }
 
     #components-reconnect-modal button:hover {
-        background-color: var(--wock-brand);
-        color: var(--wock-primary-foreground);
+        background-color: var(--wock-button-action-bg-hover);
+        color: var(--wock-button-action-fg);
     }
 
     #components-reconnect-modal button:active {
-        background-color: var(--wock-brand-hover);
+        background-color: var(--wock-button-action-bg-hover);
     }
 
     #components-reconnect-modal button:focus-visible {

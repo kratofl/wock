@@ -13,4 +13,6 @@ public class ApplicationUser
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAt { get; set; }
+
+    public ICollection<ApplicationUserRole> Roles { get; set; } = [];
 }

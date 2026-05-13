@@ -28,12 +28,22 @@ public sealed class CustomerService(IDbContextFactory<AppDbContext> dbContextFac
     public async Task<Customer> CreateAsync(
         string? name,
         string? notes,
+        string? contactName = null,
+        string? email = null,
+        string? phoneNumber = null,
+        string? billingAddress = null,
+        decimal? defaultHourlyRate = null,
         CancellationToken cancellationToken = default)
     {
         var customer = new Customer
         {
             Name = NormalizeRequired(name, "Customer name is required."),
             Notes = NormalizeOptional(notes),
+            ContactName = NormalizeOptional(contactName),
+            Email = NormalizeOptional(email),
+            PhoneNumber = NormalizeOptional(phoneNumber),
+            BillingAddress = NormalizeOptional(billingAddress),
+            DefaultHourlyRate = NormalizeNonNegative(defaultHourlyRate, nameof(defaultHourlyRate)),
             IsActive = true
         };
 
@@ -47,6 +57,11 @@ public sealed class CustomerService(IDbContextFactory<AppDbContext> dbContextFac
         int customerId,
         string? name,
         string? notes,
+        string? contactName = null,
+        string? email = null,
+        string? phoneNumber = null,
+        string? billingAddress = null,
+        decimal? defaultHourlyRate = null,
         CancellationToken cancellationToken = default)
     {
         if (customerId <= 0)
@@ -61,6 +76,11 @@ public sealed class CustomerService(IDbContextFactory<AppDbContext> dbContextFac
 
         customer.Name = NormalizeRequired(name, "Customer name is required.");
         customer.Notes = NormalizeOptional(notes);
+        customer.ContactName = NormalizeOptional(contactName);
+        customer.Email = NormalizeOptional(email);
+        customer.PhoneNumber = NormalizeOptional(phoneNumber);
+        customer.BillingAddress = NormalizeOptional(billingAddress);
+        customer.DefaultHourlyRate = NormalizeNonNegative(defaultHourlyRate, nameof(defaultHourlyRate));
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return customer;
@@ -101,5 +121,15 @@ public sealed class CustomerService(IDbContextFactory<AppDbContext> dbContextFac
     {
         var trimmed = value?.Trim();
         return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+    }
+
+    private static decimal? NormalizeNonNegative(decimal? value, string argumentName)
+    {
+        if (value < 0)
+        {
+            throw new ArgumentOutOfRangeException(argumentName, "Value must not be negative.");
+        }
+
+        return value;
     }
 }
